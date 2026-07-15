@@ -28,16 +28,17 @@ Depending on your assigned role, run the ONLY command block meant for you:
 
 For Member 1 (AI + Backend Lead):
 
-Bash
+```bash
 git checkout -b feature/backend-setup
 For Member 2 (Frontend Lead):
-
-Bash
+```
+```bash
 git checkout -b feature/frontend-setup
 For Member 3 (Data + Scraping + DevOps):
-
-Bash
+```
+```bash
 git checkout -b feature/data-setup
+```
 🏃‍♂️ Immediate Action Items per Role
 Now that you are on your feature branch, open your workspace folder and execute your initialization tasks:
 
@@ -55,8 +56,10 @@ Open a terminal inside the frontend/ folder.
 
 Initialize the framework using Vite:
 
-Bash
+```bash
 npm create vite@latest . -- --template react
+```
+
 Install and configure Tailwind CSS.
 
 Test that the local development server boots cleanly (npm run dev).
@@ -73,20 +76,22 @@ When you finish an assignment or part of your checklist and want to share your p
 
 Save and commit your changes locally:
 
-Bash
+```bash
 git add .
 git commit -m "feat: initialized base environment structure"
+```
 Bring in any updates your team members merged while you were working:
 
-Bash
+```bash
 git checkout develop
 git pull origin develop
 git checkout your-feature-branch-name
 git merge develop
+```
 (Fix any local merge conflicts if they pop up, then proceed)
 
 Push your branch to GitHub:
 
-Bash
+```bash
 git push origin your-feature-branch-name
-Open a Pull Request (PR): Go to GitHub, open a PR from your feature branch into develop, and tag a teammate to review and approve it.
+```
