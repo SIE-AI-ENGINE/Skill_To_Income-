@@ -1,10 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import settings
+from app.api.v1.api import api_router
 
 app = FastAPI(
-    title="Skill-to-Income AI Engine (SIE) API",
+    title=settings.PROJECT_NAME,
     description="Backend services for SIE execution pipeline",
-    version="1.0.0"
+    version=settings.VERSION,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
 
 # Configure CORS for Frontend integration (Member 2)
@@ -16,18 +19,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include V1 API Router
+app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
 @app.get("/")
 def read_root():
     return {
         "status": "online",
         "message": "Welcome to Skill-to-Income AI Engine API",
-        "docs": "/docs"
+        "docs": "/docs",
+        "version": settings.VERSION,
     }
+
 
 @app.get("/health", tags=["Health"])
 def health_check():
     return {
         "status": "healthy",
         "service": "SIE-Backend",
-        "database": "pending_connection"
+        "database": "pending_connection",
     }
