@@ -2,6 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.v1.api import api_router
+from app.db.base import Base
+from app.db.session import engine
+# Import all models so SQLAlchemy registers them
+from app.db.models import user, skill, market, income_kit
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -18,6 +22,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 # Include V1 API Router
 app.include_router(api_router, prefix=settings.API_V1_STR)
