@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
 class Settings(BaseSettings):
@@ -6,23 +6,31 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
 
-    # PostgreSQL Database URL Construct
+    # Direct Database URL (Neon PostgreSQL)
+    DATABASE_URL: Optional[str] = None
+
+    # Fallback Local PostgreSQL Variables
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "sie_db"
     POSTGRES_PORT: str = "5432"
-    
+
     # Security
     SECRET_KEY: str = "default_secret_key"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520
 
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
+        # Prioritize Neon DATABASE_URL from .env if present
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
         return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore"
+    )
 
 settings = Settings()
