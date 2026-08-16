@@ -1,0 +1,198 @@
+Build a complete full-stack Final Year Project called:
+
+“Skill-to-Income AI Engine (SIE)”
+
+SIE is an AI-powered platform that helps users transform their existing skills into realistic income opportunities. The system should follow this core pipeline:
+
+Skill Input → Skill Decomposition → Market Intelligence → Opportunity Ranking → Income Kit → Feedback & Analytics
+
+IMPORTANT:
+- This is a FINAL YEAR PROJECT / academic project.
+- Do NOT include a Pricing or Subscription section currently.
+- Focus on functionality, clean UI, explainable AI features, and a professional project suitable for demonstration and evaluation.
+- Do not make it look like a generic AI chatbot or commercial SaaS.
+- Use realistic/demo data where real external platform APIs are unavailable. Clearly structure the code so APIs can be integrated later.
+- Keep the project beginner/intermediate friendly and well organized.
+
+DESIGN:
+Use the attached reference screenshots as the main visual inspiration.
+Match the overall look and theme closely:
+- Clean blue and white SaaS-style interface
+- Light background
+- Blue primary color
+- Rounded white cards
+- Subtle borders and shadows
+- Modern typography
+- Clean charts and dashboards
+- Minimal professional illustrations
+- Consistent spacing
+- Professional academic-project appearance
+
+PUBLIC WEBSITE:
+Create:
+1. Landing/Home page
+   - SIE logo and name
+   - Navigation: Features, How It Works, About
+   - Login/Get Started buttons
+   - Hero: “From Learning to Earning”
+   - Short explanation of SIE
+   - Dashboard preview
+   - 5-module workflow
+   - Feature highlights
+   - Final CTA
+   - Footer
+
+2. Features page
+   - Skill Decomposition
+   - Market Intelligence
+   - Opportunity Ranking
+   - Income Kit
+   - Feedback & Analytics
+
+3. How It Works page
+   Clearly show:
+   Skill → Decompose → Analyze Market → Rank Opportunity → Generate Income Kit → Learn from Feedback
+
+4. About page
+   - Project mission
+   - Problem being solved
+   - SIE approach
+   - Team/project information
+
+AUTHENTICATION & ONBOARDING:
+Create:
+- Login/Signup modal
+- Google/GitHub/Guest/Email UI (use mock authentication if external OAuth is not configured)
+- Skill Input screen with tag-based skills
+- Profile Setup Wizard
+
+Profile setup should collect things such as:
+- Experience level
+- Goals
+- Availability
+- Target platforms
+- Income goal
+- Preferred work type
+
+MAIN APPLICATION:
+After onboarding, create a dashboard with a left sidebar similar to the reference screenshot.
+
+Sidebar:
+- Dashboard
+- Skill Decomposition
+- Market Intelligence
+- Opportunities
+- Income Kit
+- My Assets
+- Feedback & Analytics
+- Settings
+
+Dashboard:
+- Welcome banner
+- Profile completion
+- Opportunities found
+- Assets generated/deployed
+- Expected earnings
+- Market trends
+- Top recommended opportunity
+- Recent activity
+
+SKILL DECOMPOSITION:
+- Take user's skills such as Python, SQL, Power BI, Machine Learning etc.
+- Break broad skills into smaller micro-services.
+- Display demand, competition, and suitability scores.
+- Provide filters such as High Demand, Low Competition, Trending, Beginner Friendly.
+
+MARKET INTELLIGENCE:
+- Display demand vs competition
+- Trend charts
+- Market opportunity scores
+- Source/platform breakdown
+- Use demo/mock market data if live APIs are unavailable.
+
+OPPORTUNITIES:
+- Rank opportunities as #1, #2, #3...
+- Show:
+  - Opportunity title
+  - Platform
+  - Expected earnings
+  - Demand
+  - Competition
+  - Estimated effort
+  - Opportunity score
+  - “Why now?” explanation
+- Allow the user to select an opportunity and generate an Income Kit.
+
+INCOME KIT:
+For the selected opportunity, generate/display:
+1. Gig Listing
+2. Portfolio Project
+3. Landing Page
+4. Outreach Scripts
+
+Each should have:
+- Generate
+- Edit
+- Preview
+- Save/Deploy UI
+
+MY ASSETS:
+Show all generated assets with:
+- Asset name
+- Type
+- Status (Draft/Live)
+- Created date
+- View/Edit actions
+
+FEEDBACK & ANALYTICS:
+- Views
+- Clicks
+- Responses
+- Conversions
+- Performance charts
+- A/B testing demonstration
+- Recommendations based on performance
+- Show how feedback improves future opportunity recommendations
+
+SETTINGS:
+- User profile
+- Skills
+- Connected accounts
+- Notifications
+- Account settings
+
+TECHNICAL REQUIREMENTS:
+- Build a responsive full-stack application.
+- Use React for frontend.
+- Use a clean component-based architecture.
+- Use a backend/API for application logic.
+- Use a database for users, skills, opportunities, generated assets and analytics.
+- Use charts for market intelligence and analytics.
+- Keep API keys and secrets in environment variables.
+- Add proper loading, error and empty states.
+- Make navigation between pages fully functional.
+- Avoid placeholder buttons that do nothing.
+- Use mock/demo data wherever external APIs are unavailable.
+- Keep the code modular and easy to understand.
+
+AI:
+Implement the AI functionality around the SIE pipeline:
+- Skill decomposition
+- Opportunity explanation/ranking
+- Income kit content generation
+- Feedback-based recommendations
+
+If an external LLM API is unavailable, create a clean mock AI service with structured outputs so it can easily be replaced with a real model later.
+
+FINAL GOAL:
+The final result should look like a polished, professional Final Year Project called “Skill-to-Income AI Engine (SIE)” and should demonstrate the complete journey:
+
+User enters skills
+→ SIE decomposes skills
+→ analyzes market
+→ identifies best opportunities
+→ generates an Income Kit
+→ tracks assets/performance
+→ uses feedback to improve recommendations.
+
+Prioritize the core SIE functionality and visual consistency over unnecessary commercial features.

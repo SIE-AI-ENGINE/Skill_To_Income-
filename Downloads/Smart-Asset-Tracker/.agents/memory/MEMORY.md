@@ -1,0 +1,1 @@
+- [OpenAPI integer compatibility](openapi-zod-compatibility.md) — keep generated numeric contracts compatible with the workspace's installed Zod version.
