@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+  --font-sans: var(--app-font-sans);
+  --font-mono: var(--app-font-mono);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --background: 216 44% 97%;
+  --foreground: 220 38% 15%;
+  --border: 214 31% 89%;
+  --input: 214 31% 89%;
+  --ring: 216 83% 47%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 38% 15%;
+  --card-border: 214 31% 91%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 38% 15%;
+  --popover-border: 214 31% 89%;
+  --primary: 216 83% 47%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 213 42% 94%;
+  --secondary-foreground: 216 50% 28%;
+  --muted: 215 34% 94%;
+  --muted-foreground: 215 17% 47%;
+  --accent: 190 73% 43%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 73% 52%;
+  --destructive-foreground: 0 0% 100%;
+  --chart-1: 216 83% 47%;
+  --chart-2: 190 73% 43%;
+  --chart-3: 42 91% 58%;
+  --chart-4: 268 58% 63%;
+  --chart-5: 160 53% 47%;
+  --app-font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --app-font-display: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --app-font-mono: 'Space Mono', ui-monospace, monospace;
+  --radius: 0.9rem;
+  --sidebar: 220 44% 12%;
+  --sidebar-foreground: 214 31% 91%;
+  --sidebar-border: 220 34% 21%;
+  --sidebar-primary: 216 83% 56%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 220 35% 19%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-ring: 216 83% 56%;
+}
+
+.dark {
+  --background: 220 36% 10%;
+  --foreground: 214 31% 93%;
+  --border: 220 28% 22%;
+  --input: 220 28% 22%;
+  --ring: 216 83% 60%;
+  --card: 220 32% 14%;
+  --card-foreground: 214 31% 93%;
+  --card-border: 220 28% 23%;
+  --popover: 220 32% 14%;
+  --popover-foreground: 214 31% 93%;
+  --popover-border: 220 28% 23%;
+  --primary: 216 83% 60%;
+  --primary-foreground: 220 38% 10%;
+  --secondary: 220 31% 20%;
+  --secondary-foreground: 214 31% 90%;
+  --muted: 220 31% 20%;
+  --muted-foreground: 215 17% 68%;
+  --accent: 190 73% 48%;
+  --accent-foreground: 220 38% 10%;
+  --destructive: 0 73% 58%;
+  --destructive-foreground: 0 0% 100%;
+  --chart-1: 216 83% 60%;
+  --chart-2: 190 73% 48%;
+  --chart-3: 42 91% 62%;
+  --chart-4: 268 58% 70%;
+  --chart-5: 160 53% 55%;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { @apply bg-background text-foreground font-sans antialiased; }
+button, input, select, textarea { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+
+@keyframes rise-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse-soft { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes draw { from { stroke-dashoffset: 600; } to { stroke-dashoffset: 0; } }
+.animate-rise { animation: rise-in .55s cubic-bezier(.22,1,.36,1) both; }
+.animate-rise-2 { animation: rise-in .55s .08s cubic-bezier(.22,1,.36,1) both; }
+.animate-rise-3 { animation: rise-in .55s .16s cubic-bezier(.22,1,.36,1) both; }
+.animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+.chart-line { stroke-dasharray: 600; animation: draw 1.4s ease-out both; }
+
+.app-shell { min-height: 100dvh; background: hsl(var(--background)); }
+.display { font-family: var(--app-font-display); letter-spacing: -.045em; }
+.mono { font-family: var(--app-font-mono); }
+.surface { background: hsl(var(--card)); border: 1px solid hsl(var(--card-border)); border-radius: 18px; box-shadow: 0 14px 40px rgba(30, 73, 130, .06); }
+.surface-tight { background: hsl(var(--card)); border: 1px solid hsl(var(--card-border)); border-radius: 14px; }
+.eyebrow { color: hsl(var(--primary)); font-family: var(--app-font-mono); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.text-balance { text-wrap: balance; }
+.noise::after { content: ''; pointer-events: none; position: fixed; inset: 0; opacity: .025; z-index: 50; background-image: radial-gradient(rgba(28,71,126,.6) .5px, transparent .5px); background-size: 5px 5px; }
+.blue-grid { background-image: linear-gradient(rgba(40,105,198,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(40,105,198,.06) 1px, transparent 1px); background-size: 28px 28px; }
+.app-link { color: hsl(var(--muted-foreground)); transition: color .2s ease, background-color .2s ease; }
+.app-link:hover { color: hsl(var(--primary)); background: hsl(var(--secondary)); }
+.metric-number { font-family: var(--app-font-display); letter-spacing: -.055em; font-weight: 800; }
+.skeleton { background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--secondary)) 50%, hsl(var(--muted)) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+@media (max-width: 767px) {
+  .desktop-only { display: none !important; }
+  .mobile-pad { padding-left: 18px !important; padding-right: 18px !important; }
+}
