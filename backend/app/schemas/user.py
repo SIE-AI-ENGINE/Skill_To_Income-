@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
 
@@ -7,23 +7,27 @@ from datetime import datetime
 class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
-    target_income_monthly: Optional[float] = 0.0
-    career_mode: Optional[str] = "freelance"  # freelance, full_time, side_hustle
 
 
 # Properties required on signup
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(min_length=8, max_length=72)
 
 
 # Properties returned via API endpoints (hides hashed password)
 class UserResponse(UserBase):
     id: int
-    is_active: bool
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class AuthResponse(BaseModel):
+    id: str
+    email: EmailStr
+    name: str
+    onboarded: bool = False
 
 
 # Authentication Token Schemas

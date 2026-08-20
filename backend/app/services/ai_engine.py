@@ -1,6 +1,6 @@
 import os
 import json
-import math
+import re
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from app.schemas.sie import (
@@ -45,7 +45,7 @@ class SIEEngine:
                 continue
 
             # 2. Fallback to algorithmic taxonomy decomposition
-            generated_micro_services = self._algorithmic_decompose(skill_clean, base_idx=idx * 10)
+            generated_micro_services = self._algorithmic_decompose(skill_clean, base_idx=idx * 50)
             results.extend(generated_micro_services)
 
         return results
@@ -56,10 +56,11 @@ class SIEEngine:
         try:
             prompt = f"""
             You are the Skill Decomposition Engine of the SIE platform.
-            Break down the broad skill '{skill}' into 3 highly sellable, specific freelance micro-services.
-            Respond strictly in valid JSON format matching this array structure:
-            [
-              {{
+            Break down the broad skill '{skill}' into 50 highly sellable, specific freelance micro-services.
+                        Respond strictly as one valid JSON object with an 'items' array containing 50 entries:
+                        {{
+                            "items": [
+                                {{
                 "microService": "exact name of sellable service",
                 "category": "industry category",
                 "demand": 85,
@@ -67,9 +68,10 @@ class SIEEngine:
                 "suitability": 90,
                 "trend": "Rising",
                 "beginnerFriendly": true,
-                "description": "one sentence explaining value to clients"
-              }}
-            ]
+                                    "description": "one sentence explaining value to clients"
+                                }}
+                            ]
+                        }}
             """
             chat_completion = groq_client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}],
@@ -79,32 +81,50 @@ class SIEEngine:
             )
             raw_data = json.loads(chat_completion.choices[0].message.content)
             items = raw_data if isinstance(raw_data, list) else raw_data.get("items", raw_data.get("micro_services", []))
+            if not isinstance(items, list) or len(items) < 50:
+                return None
             
             output = []
             for i, item in enumerate(items):
-                output.append(
-                    DecomposedSkill(
-                        id=f"skill-ai-{skill.lower()}-{i+1}",
-                        skill=skill,
-                        microService=item.get("microService", f"{skill} Specialist Task"),
-                        category=item.get("category", "Tech & Data"),
-                        demand=int(item.get("demand", 80)),
-                        competition=int(item.get("competition", 40)),
-                        suitability=int(item.get("suitability", 85)),
-                        trend=item.get("trend", "Rising"),
-                        beginnerFriendly=bool(item.get("beginnerFriendly", True)),
-                        description=item.get("description", f"Specialized micro-service deliverable for {skill}.")
-                    )
-                )
-            return output if output else None
+                if not isinstance(item, dict):
+                    return None
+                item_content = json.dumps(item)
+                if self._contains_markup(item_content):
+                    return None
+                output.append(DecomposedSkill.model_validate({
+                    "id": f"skill-ai-{skill.lower()}-{i + 1}",
+                    "skill": skill,
+                    "microService": item.get("microService", f"{skill} Specialist Task"),
+                    "category": item.get("category", "Tech & Data"),
+                    "demand": item.get("demand", 80),
+                    "competition": item.get("competition", 40),
+                    "suitability": item.get("suitability", 85),
+                    "trend": item.get("trend", "Rising"),
+                    "beginnerFriendly": item.get("beginnerFriendly", True),
+                    "description": item.get("description", f"Specialized micro-service deliverable for {skill}.")
+                }))
+            return output
         except Exception:
             return None
 
     def _algorithmic_decompose(self, skill: str, base_idx: int) -> List[DecomposedSkill]:
+        patterns = [
+            ("Workflow Automation", "Automation", 88, 32, 94, "Rising", True),
+            ("Custom API Integration", "Backend Engineering", 82, 28, 88, "Rising", False),
+            ("Data Cleanup", "Analytics", 85, 30, 91, "Steady", True),
+            ("Performance Audit", "Analytics", 80, 35, 86, "Steady", True),
+            ("Reporting Dashboard", "Business Intelligence", 90, 42, 89, "Rising", True),
+            ("Migration Plan", "Consulting", 75, 38, 80, "Steady", False),
+            ("Testing Setup", "Quality Assurance", 78, 31, 84, "Rising", True),
+            ("Documentation Package", "Technical Writing", 72, 25, 87, "Steady", True),
+            ("Monitoring Setup", "DevOps", 79, 34, 82, "Rising", False),
+            ("Prototype Build", "Product Development", 86, 48, 85, "Rising", False),
+        ]
         templates = [
-            ("Workflow Automation & Scripting", "Automation", 88, 32, 94, "Rising", True, f"Automate repetitive operational data processing using {skill}."),
-            ("Custom Integration & API Connector", "Backend Engineering", 82, 28, 88, "Rising", False, f"Build custom endpoints and webhook listeners with {skill}."),
-            ("Audit, Quality Assurance & Optimization", "Analytics", 85, 30, 91, "Steady", True, f"Identify defects and performance bottlenecks in existing {skill} setups.")
+            (f"{scope} {pattern}", category, demand, competition, suitability, trend, beginner,
+             f"Deliver a measurable {pattern.lower()} service using {skill}.")
+            for pattern, category, demand, competition, suitability, trend, beginner in patterns
+            for scope in ["Starter", "Rapid", "Client-ready", "Production", "Lean"]
         ]
         return [
             DecomposedSkill(
@@ -128,16 +148,17 @@ class SIEEngine:
     def compute_ranked_opportunities(self, decomposed_skills: List[DecomposedSkill]) -> List[Opportunity]:
         """
         Proprietary Skill-to-Market-Demand Mapping Algorithm
-        Score = (Demand * 0.6) + ((100 - Competition) * 0.4) + Suitability Bonus
+        Score = (Demand * 0.45) + ((100 - Competition) * 0.30) + (Suitability * 0.25)
         """
         platforms = ["Upwork", "Fiverr", "LinkedIn", "IndieHackers"]
         ranked: List[Opportunity] = []
 
         for i, item in enumerate(decomposed_skills):
             # Formula: Score combines demand velocity, saturation penalty, and suitability
-            demand_weight = item.demand * 0.6
-            saturation_penalty = (100 - item.competition) * 0.4
-            composite_score = min(100, int(demand_weight + saturation_penalty))
+            demand_weight = item.demand * 0.45
+            saturation_penalty = (100 - item.competition) * 0.30
+            suitability_weight = item.suitability * 0.25
+            composite_score = min(100, max(0, int(demand_weight + saturation_penalty + suitability_weight)))
             
             # Dynamic price estimation based on demand and complexity
             base_rate = 150 if item.beginnerFriendly else 350
@@ -192,12 +213,9 @@ class SIEEngine:
                     type="Gig listing",
                     title=f"{opp_title} — Professional Service",
                     status="Ready to edit",
-                    content=(
+                    content=self._clean_content(
                         f"I will deliver a complete, high-performance {opp_title.lower()} tailored for your workflow.\n\n"
-                        "Included in deliverable:\n"
-                        "✔ Full Source Code & Structured Implementation\n"
-                        "✔ 1-on-1 Walkthrough & Verification Video\n"
-                        "✔ 14-day post-delivery bug guarantee"
+                        "Included: full implementation, a walkthrough, and 14 days of post-delivery bug support."
                     ),
                     description="Optimized service listing with clear deliverables and client guarantees."
                 ),
@@ -206,11 +224,9 @@ class SIEEngine:
                     type="Portfolio project",
                     title=f"{opp_title} Proof of Concept Case Study",
                     status="Ready to edit",
-                    content=(
-                        f"## Case Study: {opp_title}\n"
-                        "### 1. Problem\nManual bottlenecks causing delayed turnaround and reporting errors.\n"
-                        "### 2. Solution\nAutomated pipeline eliminating 80% of manual effort with guaranteed validation.\n"
-                        "### 3. Business Impact\nImmediate time-to-delivery reduction within 48 hours."
+                    content=self._clean_content(
+                        f"Case Study: {opp_title}. Problem: manual bottlenecks caused delayed turnaround and reporting errors. "
+                        "Solution: an automated pipeline with validation. Impact: faster delivery and more reliable reporting."
                     ),
                     description="Portfolio demonstration demonstrating measurable business impact."
                 ),
@@ -219,9 +235,9 @@ class SIEEngine:
                     type="Landing page",
                     title=f"Automate your workflow with {opp_title}",
                     status="Ready to edit",
-                    content=(
+                    content=self._clean_content(
                         f"Stop losing hours to repetitive execution. Get custom-built {opp_title.lower()} "
-                        "delivered with zero setup friction.\n\n[Book A Strategy Call] | [View Live Demo]"
+                        "delivered with zero setup friction. Book a strategy call or view a live demo."
                     ),
                     description="High-converting single page copy outline for direct client outreach."
                 ),
@@ -230,10 +246,10 @@ class SIEEngine:
                     type="Outreach scripts",
                     title="Cold Email & LinkedIn Pitch Sequence",
                     status="Ready to edit",
-                    content=(
-                        f"Hi {{FirstName}},\n\nI saw your team is expanding operations. I recently built a specialized "
+                    content=self._clean_content(
+                        "Hello,\n\nI saw your team is expanding operations. I recently built a specialized "
                         f"solution for {opp_title.lower()} that cuts execution time in half.\n\n"
-                        "Mind if I share a 60-second video walkthrough of how it works?\n\nBest,\n[Your Name]"
+                        "Mind if I share a 60-second video walkthrough of how it works?\n\nBest regards,\nThe SIE team"
                     ),
                     description="Value-first cold outreach script targeting decision makers."
                 )
@@ -247,6 +263,9 @@ class SIEEngine:
             prompt = f"""
             You are Module 4 (Execution Blueprint) of the SIE platform.
             Generate an Income Kit for the opportunity: '{title}'.
+            Return complete, professional, ready-to-deploy text for all four assets.
+            Do not use HTML, Markdown code fences, or placeholders such as brackets,
+            braces, 'Your Name', 'FirstName', or 'insert here'.
             Return JSON with this exact structure:
             {{
               "gigContent": "string",
@@ -261,20 +280,36 @@ class SIEEngine:
                 temperature=0.4,
                 response_format={"type": "json_object"}
             )
-            data = json.loads(completion.choices[0].message.content)
+            raw_content = completion.choices[0].message.content
+            if self._contains_markup(raw_content):
+                return None
+            data = json.loads(raw_content)
+            required_keys = {"gigContent", "portfolioContent", "landingContent", "outreachContent"}
+            if not required_keys.issubset(data) or any(not isinstance(data[key], str) for key in required_keys):
+                return None
             return IncomeKitResponse(
                 opportunityId="temp",
                 opportunityTitle=title,
                 generatedAt=datetime.now(timezone.utc).isoformat(),
                 assets=[
-                    KitAsset(id="kit-gig", type="Gig listing", title=f"{title} Gig", status="Ready to edit", content=data.get("gigContent", ""), description="AI Generated listing"),
-                    KitAsset(id="kit-portfolio", type="Portfolio project", title=f"{title} Case Study", status="Ready to edit", content=data.get("portfolioContent", ""), description="AI Generated case study"),
-                    KitAsset(id="kit-landing", type="Landing page", title=f"{title} Offer", status="Ready to edit", content=data.get("landingContent", ""), description="AI Generated landing copy"),
-                    KitAsset(id="kit-outreach", type="Outreach scripts", title=f"{title} Outreach", status="Ready to edit", content=data.get("outreachContent", ""), description="AI Generated pitch")
+                    KitAsset(id="kit-gig", type="Gig listing", title=f"{title} Gig", status="Ready to edit", content=self._clean_content(data["gigContent"]), description="AI generated listing"),
+                    KitAsset(id="kit-portfolio", type="Portfolio project", title=f"{title} Case Study", status="Ready to edit", content=self._clean_content(data["portfolioContent"]), description="AI generated case study"),
+                    KitAsset(id="kit-landing", type="Landing page", title=f"{title} Offer", status="Ready to edit", content=self._clean_content(data["landingContent"]), description="AI generated landing copy"),
+                    KitAsset(id="kit-outreach", type="Outreach scripts", title=f"{title} Outreach", status="Ready to edit", content=self._clean_content(data["outreachContent"]), description="AI generated pitch")
                 ]
             )
         except Exception:
             return None
+
+    @staticmethod
+    def _contains_markup(value: str) -> bool:
+        return "```" in value or bool(re.search(r"<\/?[a-z][^>]*>", value, re.IGNORECASE))
+
+    @classmethod
+    def _clean_content(cls, value: str) -> str:
+        if cls._contains_markup(value):
+            raise ValueError("AI content contains forbidden markup")
+        return value.strip()
 
     # -------------------------------------------------------------
     # LAYER 5: ADAPTIVE MULTI-SIGNAL FEEDBACK LOOP

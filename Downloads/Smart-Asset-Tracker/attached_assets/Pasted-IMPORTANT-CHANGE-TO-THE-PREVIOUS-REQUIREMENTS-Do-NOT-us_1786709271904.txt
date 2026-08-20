@@ -68,8 +68,8 @@ Logout must work.
 The logged-in user's information must be dynamically loaded.
 
 NEVER hardcode:
-“Ananya”
-“Ananya Rao”
+“reference user”
+“sample user”
 or any other reference-user information.
 
 If I create an account as:

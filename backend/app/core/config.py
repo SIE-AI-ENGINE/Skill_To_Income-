@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
+from typing import List, Optional
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Skill-to-Income AI Engine (SIE)"
@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = "default_secret_key"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520
+    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:

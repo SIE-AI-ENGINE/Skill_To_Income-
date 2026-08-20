@@ -10,11 +10,6 @@ export default defineConfig(({ mode }) => {
   // platform injects env vars directly.
   const env = { ...process.env, ...loadEnv(mode, process.cwd(), '') };
 
-  const port = Number(env.PORT ?? 5173);
-  if (Number.isNaN(port) || port <= 0) {
-    throw new Error(`Invalid PORT value: "${env.PORT}"`);
-  }
-
   const basePath = env.BASE_PATH ?? '/';
 
   return {
@@ -38,7 +33,7 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
     },
     server: {
-      port,
+      port: 5173,
       strictPort: true,
       host: '0.0.0.0',
       allowedHosts: true,
@@ -50,13 +45,15 @@ export default defineConfig(({ mode }) => {
       // call VITE_API_URL directly from the client, this proxy is optional.
       proxy: {
         '/api': {
-          target: env.VITE_API_URL ?? 'http://localhost:4000',
+          target: 'http://127.0.0.1:8000',
           changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.startsWith('/api/v1') ? path : path.replace(/^\/api/, '/api/v1'),
         },
       },
     },
     preview: {
-      port,
+      port: 5173,
       host: '0.0.0.0',
       allowedHosts: true,
     },

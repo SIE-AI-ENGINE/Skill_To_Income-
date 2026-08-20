@@ -46,6 +46,6 @@ export function useAuth(): AuthContextValue {
 }
 
 export function authErrorMessage(err: unknown, fallback: string): string {
-  const apiError = err as ErrorType<{ error?: string }> | undefined;
-  return apiError?.data?.error ?? fallback;
+  const apiError = err as ErrorType<{ detail?: string; error?: string }> | undefined;
+  return apiError?.data?.detail ?? apiError?.data?.error ?? fallback;
 }

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Any
+from typing import List, Literal, Optional, Any
 from datetime import date, datetime
 
 # ==========================================
@@ -35,7 +35,7 @@ class DecomposedSkill(BaseModel):
     description: str
 
 class DecomposeSkillsBody(BaseModel):
-    skills: List[str]
+    skills: List[str] = Field(min_length=1)
 
 # ==========================================
 # 3. Dashboard Schemas
@@ -89,17 +89,17 @@ class MarketIntelligenceResponse(BaseModel):
 # ==========================================
 class KitAsset(BaseModel):
     id: str
-    type: str  # "Gig listing", "Portfolio project", "Landing page", "Outreach scripts"
+    type: Literal["Gig listing", "Portfolio project", "Landing page", "Outreach scripts"]
     title: str
     status: str
-    content: str
+    content: str = Field(min_length=1)
     description: str
 
 class IncomeKitResponse(BaseModel):
     opportunityId: str
     opportunityTitle: str
     generatedAt: str
-    assets: List[KitAsset]
+    assets: List[KitAsset] = Field(min_length=4, max_length=4)
 
 class GenerateIncomeKitBody(BaseModel):
     opportunityId: str
@@ -163,6 +163,7 @@ class ProfileResponse(BaseModel):
     workType: str
     skills: List[str]
     completion: int
+    onboarded: bool = False
 
 class UpdateProfileBody(BaseModel):
     name: Optional[str] = None
@@ -174,3 +175,53 @@ class UpdateProfileBody(BaseModel):
     workType: Optional[str] = None
     skills: Optional[List[str]] = None
     completion: Optional[int] = None
+    onboarded: Optional[bool] = None
+
+
+class ProjectResponse(BaseModel):
+    id: str
+    name: str
+    description: str
+    opportunityId: str
+    status: str
+    repositoryUrl: Optional[str] = None
+    createdAt: str
+
+
+class CreateProjectBody(BaseModel):
+    name: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    opportunityId: str
+
+
+class DeploymentResponse(BaseModel):
+    id: str
+    projectId: str
+    status: str
+    url: Optional[str] = None
+    createdAt: str
+
+
+class DeployProjectBody(BaseModel):
+    projectId: str
+
+
+class FeedbackBody(BaseModel):
+    opportunityId: str
+    outcome: str = Field(min_length=1)
+    notes: Optional[str] = None
+
+
+class FeedbackResponse(BaseModel):
+    id: str
+    opportunityId: str
+    outcome: str
+    notes: Optional[str] = None
+    createdAt: str
+
+
+class HistoryEntry(BaseModel):
+    id: str
+    action: str
+    resourceId: str
+    createdAt: str

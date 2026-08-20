@@ -69,9 +69,9 @@ export function useSignup<TError = ErrorType<unknown>, TContext = unknown>(
   return useMutation({
     mutationFn: (body: SignupBodyType) => signup(body),
     ...options?.mutation,
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       queryClient.setQueryData(getMeQueryKey(), data);
-      options?.mutation?.onSuccess?.(data, variables, context);
+      options?.mutation?.onSuccess?.(data, variables, onMutateResult, context);
     },
   });
 }
@@ -94,9 +94,9 @@ export function useLogin<TError = ErrorType<unknown>, TContext = unknown>(
   return useMutation({
     mutationFn: (body: LoginBodyType) => login(body),
     ...options?.mutation,
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       queryClient.setQueryData(getMeQueryKey(), data);
-      options?.mutation?.onSuccess?.(data, variables, context);
+      options?.mutation?.onSuccess?.(data, variables, onMutateResult, context);
     },
   });
 }
@@ -111,10 +111,10 @@ export function useLogout<TError = ErrorType<unknown>, TContext = unknown>(
   return useMutation({
     mutationFn: () => logout(),
     ...options?.mutation,
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       queryClient.setQueryData(getMeQueryKey(), null);
       queryClient.clear();
-      options?.mutation?.onSuccess?.(data, variables, context);
+      options?.mutation?.onSuccess?.(data, variables, onMutateResult, context);
     },
   });
 }

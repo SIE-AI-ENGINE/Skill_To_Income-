@@ -1,48 +1,104 @@
-from fastapi import APIRouter, HTTPException, status, Depends
-from fastapi.security import OAuth2PasswordRequestForm
-from app.schemas.user import UserCreate, UserResponse, Token
-from app.core.security import get_password_hash, verify_password, create_access_token
+from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
+from sqlalchemy.orm import Session
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional
+
+from app.db.session import get_db
+from app.db.models.user import User
+from app.core.security import verify_password, get_password_hash, create_access_token, get_session_token
+from app.schemas.user import AuthResponse
 
 router = APIRouter()
 
-# Temporary in-memory user store until Member 3 provides PostgreSQL credentials
-# Allows testing auth flow without breaking database dependency constraints
+class AuthPayload(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=72)
+    name: Optional[str] = None
+
+# Active session cache for development
+ACTIVE_SESSIONS = {}
 TEMP_USER_DB = {}
 
 
-@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def signup(user_in: UserCreate):
-    if user_in.email in TEMP_USER_DB:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The user with this email already exists in the system.",
+@router.post("/signup", response_model=AuthResponse)
+def signup(payload: AuthPayload, response: Response, db: Session = Depends(get_db)):
+    user_id = None
+    user_name = payload.name or payload.email.split("@")[0].title()
+
+    try:
+        existing = db.query(User).filter(User.email == payload.email).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="User already registered")
+
+        user = User(
+            email=payload.email,
+            hashed_password=get_password_hash(payload.password),
+            full_name=user_name
         )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        user_id = str(user.id)
+    except HTTPException:
+        raise
+    except Exception:
+        # Local memory fallback if DB is offline
+        if payload.email in TEMP_USER_DB:
+            raise HTTPException(status_code=400, detail="User already registered")
+        user_id = str(len(TEMP_USER_DB) + 1)
+        TEMP_USER_DB[payload.email] = {
+            "id": user_id,
+            "email": payload.email,
+            "name": user_name,
+            "hashed_password": get_password_hash(payload.password)
+        }
 
-    # Hash password & construct user payload
-    hashed_pwd = get_password_hash(user_in.password)
-    user_dict = {
-        "id": len(TEMP_USER_DB) + 1,
-        "email": user_in.email,
-        "full_name": user_in.full_name,
-        "target_income_monthly": user_in.target_income_monthly,
-        "career_mode": user_in.career_mode,
-        "hashed_password": hashed_pwd,
-        "is_active": True,
-        "created_at": "2026-07-21T00:00:00",
-    }
-
-    TEMP_USER_DB[user_in.email] = user_dict
-    return user_dict
+    token = create_access_token(subject=user_id)
+    ACTIVE_SESSIONS[token] = {"id": user_id, "email": payload.email, "name": user_name}
+    response.set_cookie(key="sie_session", value=token, httponly=True, samesite="lax")
+    return {"id": user_id, "email": payload.email, "name": user_name}
 
 
-@router.post("/login", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = TEMP_USER_DB.get(form_data.username)
-    if not user or not verify_password(form_data.password, user["hashed_password"]):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect email or password",
-        )
+@router.post("/login", response_model=AuthResponse)
+def login(payload: AuthPayload, response: Response, db: Session = Depends(get_db)):
+    user_id = None
+    user_name = None
 
-    access_token = create_access_token(subject=user["email"])
-    return {"access_token": access_token, "token_type": "bearer"}
+    try:
+        user = db.query(User).filter(User.email == payload.email).first()
+        if not user or not verify_password(payload.password, user.hashed_password):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        user_id = str(user.id)
+        user_name = user.full_name
+    except HTTPException:
+        raise
+    except Exception:
+        user_mem = TEMP_USER_DB.get(payload.email)
+        if not user_mem or not verify_password(payload.password, user_mem["hashed_password"]):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        user_id = user_mem["id"]
+        user_name = user_mem["name"]
+
+    token = create_access_token(subject=user_id)
+    ACTIVE_SESSIONS[token] = {"id": user_id, "email": payload.email, "name": user_name}
+    response.set_cookie(key="sie_session", value=token, httponly=True, samesite="lax")
+    return {"id": user_id, "email": payload.email, "name": user_name}
+
+
+@router.get("/me", response_model=AuthResponse)
+def get_current_user(session_token: str = Depends(get_session_token)):
+    session = ACTIVE_SESSIONS.get(session_token)
+    if session:
+        from app.api.v1.endpoints.skills import profile_cache
+
+        return {**session, "onboarded": profile_cache.onboarded}
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session is no longer active")
+
+
+@router.post("/logout")
+def logout(request: Request, response: Response, bearer_token: Optional[str] = Depends(get_session_token)):
+    session_token = bearer_token or request.cookies.get("sie_session")
+    if session_token in ACTIVE_SESSIONS:
+        del ACTIVE_SESSIONS[session_token]
+    response.delete_cookie("sie_session")
+    return {"success": True}

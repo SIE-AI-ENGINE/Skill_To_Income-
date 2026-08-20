@@ -105,7 +105,7 @@ export const decomposedSkills = [
 ];
 
 export const dashboard = {
-  userName: "Ananya",
+  userName: "User",
   profileCompletion: 76,
   opportunitiesFound: 12,
   assetsGenerated: 8,
@@ -212,8 +212,8 @@ export const analytics = {
 };
 
 export const defaultProfile = {
-  name: "Ananya Sharma",
-  email: "ananya@example.com",
+  name: "User",
+  email: "user@example.com",
   experience: "Intermediate",
   goals: ["Build a portfolio", "Find first client"],
   availability: "8–12 hours / week",

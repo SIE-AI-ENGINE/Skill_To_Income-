@@ -35,8 +35,8 @@ assets_cache: List[SIEAsset] = [
 ]
 
 profile_cache = ProfileResponse(
-    name="Ananya Sharma",
-    email="ananya@example.com",
+    name="User",
+    email="user@example.com",
     experience="Intermediate",
     goals=["Build a portfolio", "Find first client"],
     availability="8–12 hours / week",
@@ -44,7 +44,8 @@ profile_cache = ProfileResponse(
     incomeGoal="$1,000–$2,500 / month",
     workType="Freelance projects",
     skills=["Python", "SQL", "Power BI"],
-    completion=80
+    completion=80,
+    onboarded=False,
 )
 
 # 1. Dashboard
@@ -69,6 +70,11 @@ def get_dashboard():
         ]
     )
 
+
+@router.get("/dashboard/overview", response_model=DashboardResponse)
+def get_dashboard_overview():
+    return get_dashboard()
+
 # 2. Skill Decomposition Engine (Layer 1 + DB Sync)
 @router.get("/skills/decomposition", response_model=List[DecomposedSkill])
 def get_skills_decomposition(filter: Optional[str] = Query(None)):
@@ -82,6 +88,11 @@ def get_skills_decomposition(filter: Optional[str] = Query(None)):
            ("trending" in fq and s.trend == "Rising") or 
            ("beginner" in fq and s.beginnerFriendly)
     ]
+
+
+@router.get("/skills", response_model=List[DecomposedSkill])
+def get_skills(filter: Optional[str] = Query(None)):
+    return get_skills_decomposition(filter)
 
 @router.post("/skills/decomposition", response_model=List[DecomposedSkill])
 def decompose_skills(payload: DecomposeSkillsBody, db: Session = Depends(get_db)):
@@ -106,6 +117,11 @@ def decompose_skills(payload: DecomposeSkillsBody, db: Session = Depends(get_db)
 
     return user_skills_cache
 
+
+@router.post("/skills/analyze", response_model=List[DecomposedSkill])
+def analyze_skills(payload: DecomposeSkillsBody, db: Session = Depends(get_db)):
+    return decompose_skills(payload, db)
+
 # 3. Market Intelligence (Layer 2)
 @router.get("/market", response_model=MarketIntelligenceResponse)
 def get_market():
@@ -128,6 +144,11 @@ def get_market():
             {"label": "W3", "value": 75}, {"label": "W4", "value": 84}
         ]
     }
+
+
+@router.get("/market/trends", response_model=MarketIntelligenceResponse)
+def get_market_trends():
+    return get_market()
 
 # 4. Opportunity Ranking Engine (Layer 3)
 @router.get("/opportunities", response_model=List[Opportunity])
@@ -154,17 +175,20 @@ def get_income_kit():
 def generate_income_kit(payload: GenerateIncomeKitBody, db: Session = Depends(get_db)):
     global current_kit_cache
     selected_opp = next((o for o in opportunities_cache if o.id == payload.opportunityId), None)
-    title = selected_opp.title if selected_opp else "Custom Micro-Service Deliverable"
+    if not selected_opp:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+    title = selected_opp.title
     current_kit_cache = ai_engine_service.generate_income_kit(payload.opportunityId, title)
 
     # Optional DB record persistence
     try:
+        assets_by_type = {asset.type: asset.model_dump() for asset in current_kit_cache.assets}
         kit_record = IncomeKit(
             user_id=1,
-            fiverr_gig=current_kit_cache.assets[0].model_dump() if len(current_kit_cache.assets) > 0 else {},
-            portfolio_site=current_kit_cache.assets[1].model_dump() if len(current_kit_cache.assets) > 1 else {},
-            github_readme=current_kit_cache.assets[2].model_dump() if len(current_kit_cache.assets) > 2 else {},
-            cold_email_template=current_kit_cache.assets[3].model_dump() if len(current_kit_cache.assets) > 3 else {}
+            fiverr_gig=assets_by_type["Gig listing"],
+            portfolio_site=assets_by_type["Landing page"],
+            github_readme=assets_by_type["Portfolio project"],
+            cold_email_template=assets_by_type["Outreach scripts"]
         )
         db.add(kit_record)
         db.commit()
@@ -196,6 +220,11 @@ def get_analytics():
     total_clicks = sum(a.clicks for a in assets_cache)
     total_conversions = sum(a.responses for a in assets_cache)
     return ai_engine_service.compute_adaptive_feedback(total_views, total_clicks, total_conversions)
+
+
+@router.get("/analytics/metrics", response_model=AnalyticsResponse)
+def get_analytics_metrics():
+    return get_analytics()
 
 # 8. Profile Settings
 @router.get("/profile", response_model=ProfileResponse)
