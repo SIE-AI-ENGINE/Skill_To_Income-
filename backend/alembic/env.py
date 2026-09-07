@@ -8,10 +8,7 @@ from app.core.config import settings
 from app.db.base import Base
 
 # Import all models so Alembic can detect them
-from app.db.models.user import User
-from app.db.models.skill import Skill
-from app.db.models.market import MarketData
-from app.db.models.income_kit import IncomeKit
+from app.db.models import *
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

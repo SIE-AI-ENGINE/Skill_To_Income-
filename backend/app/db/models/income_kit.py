@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, JSON, DateTime
+from sqlalchemy import Column, Integer, JSON, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
 
@@ -6,7 +7,7 @@ class IncomeKit(Base):
     __tablename__ = "income_kits"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     
     # Bundled asset payloads in JSON
     fiverr_gig = Column(JSON, nullable=True)
@@ -19,3 +20,6 @@ class IncomeKit(Base):
     whatsapp_pitch = Column(JSON, nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User", back_populates="income_kits")

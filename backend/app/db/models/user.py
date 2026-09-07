@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, Float
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
 
@@ -18,3 +19,10 @@ class User(Base):
     career_mode = Column(String, nullable=True)  # e.g. Freelancing + Remote Jobs
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    skills = relationship("Skill", back_populates="user", cascade="all, delete-orphan")
+    income_kits = relationship("IncomeKit", back_populates="user", cascade="all, delete-orphan")
+    history = relationship("History", back_populates="user", cascade="all, delete-orphan")
+    analytics = relationship("Analytics", back_populates="user", cascade="all, delete-orphan")
+    feedbacks = relationship("Feedback", back_populates="user", cascade="all, delete-orphan")

@@ -5,7 +5,9 @@ from app.api.v1.api import api_router
 from app.db.base import Base
 from app.db.session import engine
 # Import all models so SQLAlchemy registers them
-from app.db.models import user, skill, market, income_kit
+from app.db import models
+from starlette.middleware.base import BaseHTTPMiddleware
+from app.core.middleware import catch_exceptions_middleware
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -22,6 +24,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.middleware("http")(catch_exceptions_middleware)
 
 # Create database tables
 Base.metadata.create_all(bind=engine)

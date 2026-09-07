@@ -1,48 +1,39 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from typing import Any
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+from app.db.models.user import User
 from app.schemas.user import UserCreate, UserResponse, Token
 from app.core.security import get_password_hash, verify_password, create_access_token
+from app.api.deps import get_db, get_current_user
 
 router = APIRouter()
 
-# Temporary in-memory user store until Member 3 provides PostgreSQL credentials
-# Allows testing auth flow without breaking database dependency constraints
-TEMP_USER_DB = {}
-
-
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def signup(user_in: UserCreate):
-    if user_in.email in TEMP_USER_DB:
+def signup(*, db: Session = Depends(get_db), user_in: UserCreate) -> Any:
+    user = db.query(User).filter(User.email == user_in.email).first()
+    if user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail="The user with this email already exists in the system.",
         )
-
-    # Hash password & construct user payload
-    hashed_pwd = get_password_hash(user_in.password)
-    user_dict = {
-        "id": len(TEMP_USER_DB) + 1,
-        "email": user_in.email,
-        "full_name": user_in.full_name,
-        "target_income_monthly": user_in.target_income_monthly,
-        "career_mode": user_in.career_mode,
-        "hashed_password": hashed_pwd,
-        "is_active": True,
-        "created_at": "2026-07-21T00:00:00",
-    }
-
-    TEMP_USER_DB[user_in.email] = user_dict
-    return user_dict
-
+    user_data = user_in.model_dump(exclude={"password"})
+    user_data["hashed_password"] = get_password_hash(user_in.password)
+    user = User(**user_data)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
 
 @router.post("/login", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = TEMP_USER_DB.get(form_data.username)
-    if not user or not verify_password(form_data.password, user["hashed_password"]):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect email or password",
-        )
-
-    access_token = create_access_token(subject=user["email"])
+def login(*, db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()) -> Any:
+    user = db.query(User).filter(User.email == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
+    
+    access_token = create_access_token(subject=user.email)
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.get("/me", response_model=UserResponse)
+def get_me(current_user: User = Depends(get_current_user)) -> Any:
+    return current_user

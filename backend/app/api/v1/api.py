@@ -1,5 +1,13 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth
+from app.api.v1.endpoints import (
+    auth, users, skills, market, income_kits, analytics, feedback
+)
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(skills.router, prefix="/skills", tags=["skills"])
+api_router.include_router(market.router, prefix="/market", tags=["market"])
+api_router.include_router(income_kits.router, prefix="/income-kits", tags=["income-kits"])
+api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+api_router.include_router(feedback.router, prefix="/feedback", tags=["feedback"])
