@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # FastAPI Backend Service (Skill-to-Income AI Engine)
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sie-backend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - PORT=8000
+      - ENVIRONMENT=production
+      - DEBUG=False
+      # By default, points to local Postgres service. Can be overridden with Neon URL.
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@db:5432/sie_db}
+      - SECRET_KEY=${SECRET_KEY:-sie_production_secure_secret_key_3f7d2c91b84a7e1d}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=11520
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173
+      - DB_POOL_SIZE=5
+      - DB_MAX_OVERFLOW=10
+      - DB_POOL_PRE_PING=True
+      - DB_POOL_RECYCLE=300
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sie-network
+
+  # ----------------------------------------------------------------------------
+  # Local PostgreSQL Database (for offline evaluation / local testing)
+  # ----------------------------------------------------------------------------
+  db:
+    image: postgres:15-alpine
+    container_name: sie-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=sie_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sie_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sie-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  sie-network:
+    driver: bridge

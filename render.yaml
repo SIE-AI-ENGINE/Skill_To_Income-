@@ -1,0 +1,38 @@
+services:
+  # ----------------------------------------------------------------------------
+  # Render Web Service: FastAPI Backend with Neon PostgreSQL
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: sie-api-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    startCommand: "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2"
+    plan: free
+    region: oregon
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "False"
+      - key: DATABASE_URL
+        sync: false # Set securely in Render dashboard with Neon connection string
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "11520"
+      - key: CORS_ORIGINS
+        value: "http://localhost:3000,http://localhost:5173,https://sie-engine.onrender.com"
+      - key: DB_POOL_SIZE
+        value: "5"
+      - key: DB_MAX_OVERFLOW
+        value: "10"
+      - key: DB_POOL_PRE_PING
+        value: "True"
+      - key: DB_POOL_RECYCLE
+        value: "300"
+    healthCheckPath: /health

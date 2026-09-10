@@ -1,0 +1,50 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments & Secrets
+.env
+.env.local
+.env.*.local
+backend/.env
+backend/.env.local
+venv/
+.venv/
+env/
+ENV/
+
+# Testing & Coverage
+.pytest_cache/
+backend/.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Node & Frontend dependencies and builds
+node_modules/
+dist/
+build/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/lib/**/node_modules/
+frontend/lib/**/dist/
+
+# IDEs & System files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Legacy staging directory artifacts
+Downloads/Smart-Asset-Tracker/artifacts/sie-engine/node_modules/
+Downloads/Smart-Asset-Tracker/artifacts/sie-engine/dist/

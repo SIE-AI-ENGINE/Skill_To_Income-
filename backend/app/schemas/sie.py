@@ -103,6 +103,8 @@ class IncomeKitResponse(BaseModel):
 
 class GenerateIncomeKitBody(BaseModel):
     opportunityId: str
+    opportunityTitle: Optional[str] = None
+
 
 # ==========================================
 # 6. Asset & Tracker Schemas
@@ -116,8 +118,8 @@ class SIEAsset(BaseModel):
     views: int
     clicks: int
     responses: int
-    content: str
-    opportunityId: str
+    content: Optional[str] = ""
+    opportunityId: Optional[str] = ""
 
 class UpdateAssetBody(BaseModel):
     name: Optional[str] = None

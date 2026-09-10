@@ -1,0 +1,74 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+
+jobs:
+  backend-ci:
+    name: Backend CI & Automated Tests
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: sqlite:///:memory:
+      SECRET_KEY: test-ci-secret-key-for-jwt-tokens
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 11520
+      PROJECT_NAME: "Skill to Income AI Engine (SIE)"
+      PYTHONPATH: backend:.
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install Backend Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run Pytest Test Suite
+        run: |
+          pytest backend/tests -v
+
+  frontend-ci:
+    name: Frontend CI & Production Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install Frontend Dependencies
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: Validate Production Build
+        run: pnpm run build
+        env:
+          VITE_API_URL: http://localhost:8000/api/v1
