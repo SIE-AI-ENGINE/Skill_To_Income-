@@ -1,0 +1,145 @@
+IMPORTANT CHANGE TO THE PREVIOUS REQUIREMENTS:
+
+Do NOT use mock, fake, demo, seeded, or hardcoded business data.
+
+I would rather have an EMPTY but FUNCTIONAL application than display fake data.
+
+The application should work with real user-created data only.
+
+Remove all fake/demo:
+- opportunities
+- earnings
+- market statistics
+- analytics
+- assets
+- user information
+- skill data
+
+The only exception is UI text/placeholders needed to explain what the user should do.
+
+FUNCTIONALITY IS THE PRIORITY.
+
+For example:
+
+Dashboard:
+- If the user has no data, show:
+  “No opportunities yet”
+  “Add your skills to get started”
+- Stats can show 0.
+
+Skill Decomposition:
+- User enters/selects their actual skill.
+- Clicking “Decompose” should trigger the actual decomposition functionality.
+- If AI integration is not connected yet, show an appropriate empty/error state rather than fake results.
+
+Market Intelligence:
+- If there is no real market data source connected, show:
+  “Market data unavailable”
+  instead of fake charts/numbers.
+
+Opportunities:
+- If no real opportunities have been retrieved, show:
+  “No opportunities found yet.”
+
+Income Kit:
+- It should only generate content when an actual opportunity is selected.
+- Do not pre-populate fake opportunities.
+
+My Assets:
+- Initially empty.
+- When the USER generates and saves an asset, it should appear here.
+- Saved assets must persist.
+
+Feedback & Analytics:
+- Initially empty/zero.
+- Only display data generated from actual user interactions or connected data.
+
+AUTHENTICATION:
+This MUST be real functional authentication.
+
+Signup:
+Name + Email + Password
+
+Login:
+Email + Password
+
+Logout must work.
+
+The logged-in user's information must be dynamically loaded.
+
+NEVER hardcode:
+“reference user”
+“sample user”
+or any other reference-user information.
+
+If I create an account as:
+
+Abhini
+
+the application must display:
+
+“Good morning, Abhini”
+
+If I change my name in Settings to:
+
+Test User
+
+the entire application must update to:
+
+“Good morning, Test User”
+
+and the change must persist after logout/login.
+
+SETTINGS:
+Changes made by the user must actually be saved.
+
+SKILLS:
+When the user adds/removes skills, those changes must persist.
+
+NAVIGATION:
+Every sidebar page and button must actually work.
+
+DATA:
+Use the existing database/backend if available.
+
+If there is no data yet, EMPTY STATE is completely acceptable.
+
+Do NOT create fake data just to make the UI look populated.
+
+AI:
+Do not create fake AI responses.
+
+Create the proper AI service/API structure, but if no API key/provider is configured, show an appropriate message such as:
+
+“AI service is not configured yet.”
+
+SCRAPING/MARKET DATA:
+Do not simulate scraping.
+
+If no real source/API is connected, show:
+
+“No market data available.”
+
+The architecture should allow real APIs/scrapers to be connected later.
+
+FINAL REQUIREMENT:
+
+I want this project to behave like a REAL application even if the database is initially empty.
+
+Correct flow:
+
+Signup
+→ Login
+→ Profile
+→ Add Skills
+→ Dashboard
+→ Use SIE modules
+→ Generate real results when services/data are available
+→ Save user-generated assets
+→ View saved data later
+
+EMPTY DATA IS OK.
+
+NON-FUNCTIONAL BUTTONS, HARDCODED USER DATA AND FAKE RESULTS ARE NOT OK.
+
+Do not redesign the current UI. Keep the existing SIE blue/white design.

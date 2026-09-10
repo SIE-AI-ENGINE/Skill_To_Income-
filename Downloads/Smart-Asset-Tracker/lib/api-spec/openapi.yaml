@@ -1,0 +1,476 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: dashboard
+    description: Dashboard overview
+  - name: skills
+    description: Skill decomposition
+  - name: market
+    description: Market intelligence
+  - name: opportunities
+    description: Ranked income opportunities
+  - name: income-kit
+    description: Generated income-kit assets
+  - name: analytics
+    description: Feedback and analytics
+  - name: profile
+    description: User profile and onboarding
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get dashboard overview
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /skills/decomposition:
+    get:
+      operationId: getSkillDecomposition
+      tags: [skills]
+      summary: Get decomposed skills
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Decomposed skill list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SkillDecomposition"
+    post:
+      operationId: decomposeSkills
+      tags: [skills]
+      summary: Decompose user skills
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SkillInput"
+      responses:
+        "200":
+          description: Decomposed skill list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SkillDecomposition"
+  /market:
+    get:
+      operationId: getMarketIntelligence
+      tags: [market]
+      summary: Get market intelligence
+      responses:
+        "200":
+          description: Market intelligence snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketIntelligence"
+  /opportunities:
+    get:
+      operationId: getOpportunities
+      tags: [opportunities]
+      summary: Get ranked opportunities
+      responses:
+        "200":
+          description: Ranked opportunity list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Opportunity"
+  /opportunities/{id}:
+    get:
+      operationId: getOpportunity
+      tags: [opportunities]
+      summary: Get one opportunity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Opportunity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Opportunity"
+        "404":
+          description: Opportunity not found
+  /income-kit:
+    get:
+      operationId: getIncomeKit
+      tags: [income-kit]
+      summary: Get current income kit
+      responses:
+        "200":
+          description: Income kit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncomeKit"
+    post:
+      operationId: generateIncomeKit
+      tags: [income-kit]
+      summary: Generate an income kit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IncomeKitInput"
+      responses:
+        "200":
+          description: Generated income kit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncomeKit"
+  /assets:
+    get:
+      operationId: getAssets
+      tags: [income-kit]
+      summary: Get saved assets
+      responses:
+        "200":
+          description: Saved asset list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Asset"
+  /assets/{id}:
+    patch:
+      operationId: updateAsset
+      tags: [income-kit]
+      summary: Update asset status or content
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetUpdate"
+      responses:
+        "200":
+          description: Updated asset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+        "404":
+          description: Asset not found
+  /analytics:
+    get:
+      operationId: getAnalytics
+      tags: [analytics]
+      summary: Get feedback and analytics
+      responses:
+        "200":
+          description: Analytics snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analytics"
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+    patch:
+      operationId: updateProfile
+      tags: [profile]
+      summary: Update onboarding profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Dashboard:
+      type: object
+      required: [userName, profileCompletion, opportunitiesFound, assetsGenerated, expectedEarnings, topOpportunity, recentActivity, trend]
+      properties:
+        userName: { type: string }
+        profileCompletion: { type: number }
+        opportunitiesFound: { type: number }
+        assetsGenerated: { type: number }
+        expectedEarnings: { type: number }
+        topOpportunity:
+          $ref: "#/components/schemas/Opportunity"
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/Activity"
+        trend:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendPoint"
+    Activity:
+      type: object
+      required: [id, title, detail, time, tone]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        detail: { type: string }
+        time: { type: string }
+        tone: { type: string }
+    TrendPoint:
+      type: object
+      required: [label, value]
+      properties:
+        label: { type: string }
+        value: { type: number }
+    SkillInput:
+      type: object
+      required: [skills]
+      properties:
+        skills:
+          type: array
+          items: { type: string }
+    SkillDecomposition:
+      type: object
+      required: [id, skill, microService, category, demand, competition, suitability, trend, beginnerFriendly, description]
+      properties:
+        id: { type: string }
+        skill: { type: string }
+        microService: { type: string }
+        category: { type: string }
+        demand: { type: number }
+        competition: { type: number }
+        suitability: { type: number }
+        trend: { type: string }
+        beginnerFriendly: { type: boolean }
+        description: { type: string }
+    MarketIntelligence:
+      type: object
+      required: [marketScore, demand, competition, trend, sources, categories, weeklyTrend]
+      properties:
+        marketScore: { type: number }
+        demand: { type: number }
+        competition: { type: number }
+        trend: { type: string }
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/SourceBreakdown"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryBreakdown"
+        weeklyTrend:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendPoint"
+    SourceBreakdown:
+      type: object
+      required: [name, value, color]
+      properties:
+        name: { type: string }
+        value: { type: number }
+        color: { type: string }
+    CategoryBreakdown:
+      type: object
+      required: [name, demand, competition, score]
+      properties:
+        name: { type: string }
+        demand: { type: number }
+        competition: { type: number }
+        score: { type: number }
+    Opportunity:
+      type: object
+      required: [id, rank, title, platform, expectedEarnings, demand, competition, effort, score, whyNow, description, tags]
+      properties:
+        id: { type: string }
+        rank: { type: number }
+        title: { type: string }
+        platform: { type: string }
+        expectedEarnings: { type: string }
+        demand: { type: number }
+        competition: { type: number }
+        effort: { type: string }
+        score: { type: number }
+        whyNow: { type: string }
+        description: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+    IncomeKitInput:
+      type: object
+      required: [opportunityId]
+      properties:
+        opportunityId: { type: string }
+    IncomeKit:
+      type: object
+      required: [opportunityId, opportunityTitle, generatedAt, assets]
+      properties:
+        opportunityId: { type: string }
+        opportunityTitle: { type: string }
+        generatedAt: { type: string }
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/KitAsset"
+    KitAsset:
+      type: object
+      required: [id, type, title, status, content, description]
+      properties:
+        id: { type: string }
+        type: { type: string }
+        title: { type: string }
+        status: { type: string }
+        content: { type: string }
+        description: { type: string }
+    Asset:
+      type: object
+      required: [id, name, type, status, createdAt, views, clicks, responses]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        type: { type: string }
+        status: { type: string }
+        createdAt: { type: string }
+        views: { type: number }
+        clicks: { type: number }
+        responses: { type: number }
+    AssetUpdate:
+      type: object
+      properties:
+        status: { type: string }
+        name: { type: string }
+    Analytics:
+      type: object
+      required: [views, clicks, responses, conversions, conversionRate, performance, recommendations, experiments]
+      properties:
+        views: { type: number }
+        clicks: { type: number }
+        responses: { type: number }
+        conversions: { type: number }
+        conversionRate: { type: number }
+        performance:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendPoint"
+        recommendations:
+          type: array
+          items: { type: string }
+        experiments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Experiment"
+    Experiment:
+      type: object
+      required: [id, name, status, variantA, variantB, winner]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string }
+        variantA: { type: number }
+        variantB: { type: number }
+        winner: { type: string }
+    Profile:
+      type: object
+      required: [name, email, experience, goals, availability, platforms, incomeGoal, workType, skills, completion]
+      properties:
+        name: { type: string }
+        email: { type: string }
+        experience: { type: string }
+        goals:
+          type: array
+          items: { type: string }
+        availability: { type: string }
+        platforms:
+          type: array
+          items: { type: string }
+        incomeGoal: { type: string }
+        workType: { type: string }
+        skills:
+          type: array
+          items: { type: string }
+        completion: { type: number }
+    ProfileUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        email: { type: string }
+        experience: { type: string }
+        goals:
+          type: array
+          items: { type: string }
+        availability: { type: string }
+        platforms:
+          type: array
+          items: { type: string }
+        incomeGoal: { type: string }
+        workType: { type: string }
+        skills:
+          type: array
+          items: { type: string }
+

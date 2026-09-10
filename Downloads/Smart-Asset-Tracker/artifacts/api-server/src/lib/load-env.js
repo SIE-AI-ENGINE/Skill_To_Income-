@@ -1,0 +1,2 @@
+process.env.DATABASE_URL = "postgres://neondb_owner:npg_FijQL5PD3bXt@ep-wispy-grass-axg4d74u.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require";
+process.env.SESSION_SECRET = "super-secret-key-123456789";
