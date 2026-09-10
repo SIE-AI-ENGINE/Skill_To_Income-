@@ -16,13 +16,6 @@ jobs:
   backend-ci:
     name: Backend CI & Automated Tests
     runs-on: ubuntu-latest
-    env:
-      DATABASE_URL: "sqlite:///:memory:"
-      SECRET_KEY: "test-ci-secret-key-for-jwt-tokens"
-      ALGORITHM: "HS256"
-      ACCESS_TOKEN_EXPIRE_MINUTES: "11520"
-      PROJECT_NAME: "Skill to Income AI Engine (SIE)"
-      PYTHONPATH: "backend:."
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -35,13 +28,14 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - name: Install Backend Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
+        run: python -m pip install --upgrade pip && python -m pip install -r backend/requirements.txt
 
       - name: Run Pytest Test Suite
-        run: |
-          pytest backend/tests -v
+        env:
+          DATABASE_URL: "sqlite:///:memory:"
+          PYTHONPATH: "backend:."
+          SECRET_KEY: "ci-secret-key-for-testing"
+        run: python -m pytest backend/tests -v
 
   frontend-ci:
     name: Frontend CI & Production Build
@@ -57,6 +51,7 @@ jobs:
         uses: pnpm/action-setup@v3
         with:
           version: 9
+          run_install: false
 
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
@@ -66,7 +61,7 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install Frontend Dependencies
-        run: pnpm install --frozen-lockfile || pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Validate Production Build
         run: pnpm run build
