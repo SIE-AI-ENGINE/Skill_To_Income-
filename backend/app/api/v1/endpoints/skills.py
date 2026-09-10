@@ -80,14 +80,21 @@ def get_dashboard_overview():
 def get_skills_decomposition(filter: Optional[str] = Query(None)):
     if not filter:
         return user_skills_cache
-    fq = filter.lower()
-    return [
-        s for s in user_skills_cache 
-        if ("demand" in fq and s.demand >= 85) or 
-           ("competition" in fq and s.competition <= 40) or 
-           ("trending" in fq and s.trend == "Rising") or 
-           ("beginner" in fq and s.beginnerFriendly)
-    ]
+
+    fq = filter.lower().strip()
+    if "high demand" in fq:
+        return [s for s in user_skills_cache if s.demand >= 80]
+    if "low competition" in fq:
+        return [s for s in user_skills_cache if s.competition <= 40]
+    if "trending" in fq:
+        return [
+            s for s in user_skills_cache
+            if s.trend and "+" in s.trend and any(ch.isdigit() for ch in s.trend)
+        ]
+    if "beginner" in fq:
+        return [s for s in user_skills_cache if s.beginnerFriendly]
+
+    return user_skills_cache
 
 
 @router.get("/skills", response_model=List[DecomposedSkill])

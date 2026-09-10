@@ -36,16 +36,20 @@ class SIEEngine:
         results: List[DecomposedSkill] = []
 
         for idx, skill_raw in enumerate(skills):
-            skill_clean = skill_raw.strip().title()
-            
-            # 1. Attempt dynamic LLM generation if GROQ_API_KEY is present
-            llm_generated = self._llm_decompose(skill_clean)
-            if llm_generated:
-                results.extend(llm_generated)
+            skill_clean = skill_raw.strip()
+            if not skill_clean:
                 continue
 
-            # 2. Fallback to algorithmic taxonomy decomposition
-            generated_micro_services = self._algorithmic_decompose(skill_clean, base_idx=idx * 50)
+            skill_name = skill_clean.title()
+
+            # 1. Attempt dynamic LLM generation if GROQ_API_KEY is present.
+            llm_generated = self._llm_decompose(skill_name)
+            if llm_generated:
+                results.extend(llm_generated[:8])
+                continue
+
+            # 2. Fallback to deterministic, domain-aware decomposition.
+            generated_micro_services = self._algorithmic_decompose(skill_name, base_idx=idx * 100)
             results.extend(generated_micro_services)
 
         return results
@@ -108,39 +112,91 @@ class SIEEngine:
             return None
 
     def _algorithmic_decompose(self, skill: str, base_idx: int) -> List[DecomposedSkill]:
-        patterns = [
-            ("Workflow Automation", "Automation", 88, 32, 94, "Rising", True),
-            ("Custom API Integration", "Backend Engineering", 82, 28, 88, "Rising", False),
-            ("Data Cleanup", "Analytics", 85, 30, 91, "Steady", True),
-            ("Performance Audit", "Analytics", 80, 35, 86, "Steady", True),
-            ("Reporting Dashboard", "Business Intelligence", 90, 42, 89, "Rising", True),
-            ("Migration Plan", "Consulting", 75, 38, 80, "Steady", False),
-            ("Testing Setup", "Quality Assurance", 78, 31, 84, "Rising", True),
-            ("Documentation Package", "Technical Writing", 72, 25, 87, "Steady", True),
-            ("Monitoring Setup", "DevOps", 79, 34, 82, "Rising", False),
-            ("Prototype Build", "Product Development", 86, 48, 85, "Rising", False),
-        ]
-        templates = [
-            (f"{scope} {pattern}", category, demand, competition, suitability, trend, beginner,
-             f"Deliver a measurable {pattern.lower()} service using {skill}.")
-            for pattern, category, demand, competition, suitability, trend, beginner in patterns
-            for scope in ["Starter", "Rapid", "Client-ready", "Production", "Lean"]
-        ]
-        return [
-            DecomposedSkill(
-                id=f"skill-{base_idx + i + 1}",
-                skill=skill,
-                microService=f"{skill} {title}",
-                category=cat,
-                demand=dem,
-                competition=comp,
-                suitability=suit,
-                trend=trend,
-                beginnerFriendly=beg,
-                description=desc
+        skill_key = skill.lower()
+
+        if "java" in skill_key:
+            domain_services = [
+                ("Spring Boot REST API endpoint integration", "Engineering", 89, 34, 94, "+18%", False, "Build and document production-ready REST endpoints that connect Java services to real client workflows."),
+                ("Legacy Java 8 to 17 migration audit", "Engineering", 82, 46, 90, "+12%", False, "Assess risky migration points, compatibility gaps and deployment blockers before upgrading a Java codebase."),
+                ("JUnit & Mockito test suite setup", "Quality Assurance", 79, 38, 88, "+15%", True, "Create a reliable unit-test foundation that catches regressions before code ships to production."),
+                ("Log4j / performance bottleneck profiling", "Analytics", 76, 51, 84, "+9%", False, "Diagnose slow application paths and logging issues to improve stability and response times."),
+                ("Java microservice observability dashboarding", "DevOps", 86, 42, 92, "+20%", False, "Deliver service health dashboards that surface uptime, latency and error trends for teams."),
+                ("Spring Security auth hardening", "Security", 74, 44, 86, "+7%", False, "Harden authentication and authorization flows for enterprise Java applications that handle user data."),
+                ("Batch processing job optimization", "Automation", 68, 53, 80, "+6%", False, "Tune Java batch jobs so they run faster, consume less memory and complete on schedule."),
+            ]
+        elif "python" in skill_key:
+            domain_services = [
+                ("Python ETL pipeline automation", "Automation", 91, 33, 95, "+24%", True, "Build reusable extraction and transformation pipelines that move business data without manual spreadsheet work."),
+                ("FastAPI CRUD service design", "Engineering", 87, 36, 92, "+21%", False, "Ship clean API endpoints for internal tools and customer-facing apps using Python web services."),
+                ("Data cleaning and validation workflow", "Analytics", 88, 29, 93, "+18%", True, "Clean messy CSV, JSON and database exports into trusted analytical data ready for reporting."),
+                ("Automation script for repetitive business tasks", "Operations", 82, 31, 90, "+17%", True, "Create time-saving scripts that eliminate repetitive process work across teams and systems."),
+                ("Machine learning prototype for forecasting", "AI", 75, 58, 85, "+14%", False, "Prototype predictive workflows that help small teams spot demand, churn or operational risk earlier."),
+                ("SQL + Python reporting dashboard", "Analytics", 90, 35, 94, "+19%", True, "Combine query logic and Python analysis to produce dashboards that support operational decisions."),
+                ("Web scraping & data collection pipeline", "Research", 69, 62, 78, "+5%", False, "Collect public or internal data feeds in a structured way for analysis, comparison or lead generation."),
+            ]
+        elif "video" in skill_key or "editing" in skill_key:
+            domain_services = [
+                ("Short-form hook repurposing for Reels and TikTok", "Content Creation", 91, 38, 96, "+22%", True, "Turn one long-form video into multiple short, high-retention clips with hooks and captions."),
+                ("Podcast multi-cam audio and video sync", "Production", 80, 42, 89, "+17%", False, "Align multi-source recording tracks into a polished watchable podcast or webinar edit."),
+                ("Premiere motion title template creation", "Design", 74, 52, 83, "+9%", True, "Create reusable title packs that let brands produce a more premium video identity quickly."),
+                ("Color grading and sound mastering pass", "Post-production", 86, 31, 92, "+16%", False, "Deliver a cinematic final pass that makes raw footage feel polished and professionally packaged."),
+                ("Social ad cut-down package", "Marketing", 88, 35, 93, "+18%", True, "Turn educational or product videos into short, variant-specific ad edits for different audiences."),
+                ("Thumbnail and packaging design for video channels", "Design", 70, 44, 81, "+11%", True, "Design clickable cover graphics that improve video watch-through and channel trust."),
+                ("B-roll and scene sequencing workflow", "Content Strategy", 73, 49, 84, "+8%", True, "Structure raw footage into a narrative flow that keeps viewers engaged and saves editing time."),
+            ]
+        elif "figma" in skill_key or "design" in skill_key:
+            domain_services = [
+                ("UI system and component library design", "Design Systems", 90, 30, 96, "+19%", False, "Design reusable interface building blocks that keep product screens consistent and faster to ship."),
+                ("Landing page conversion redesign", "Marketing Design", 88, 34, 94, "+15%", True, "Improve page flow and layout to turn more traffic into signups, leads or sales conversations."),
+                ("Mobile app wireframe sprint kit", "Product Design", 83, 40, 90, "+12%", True, "Package user flows, low-fidelity screens and interaction ideas for a fast design sprint."),
+                ("Marketing asset set for launch campaigns", "Branding", 77, 47, 86, "+10%", True, "Create a reusable bundle of ad graphics, social assets and presentation visuals for launches."),
+                ("Accessibility and usability audit", "UX Research", 72, 51, 84, "+8%", False, "Review screens for clarity, contrast and navigation problems before release."),
+                ("Prototype motion and interaction polish", "Interaction Design", 76, 45, 87, "+13%", False, "Add micro-interactions and guided transitions so product flows feel more intuitive and premium."),
+            ]
+        elif "sql" in skill_key or "database" in skill_key:
+            domain_services = [
+                ("Data warehouse query optimization", "Analytics", 87, 29, 94, "+21%", False, "Tune slow SQL queries so reporting and dashboards respond quickly enough for weekly decision-making."),
+                ("Business KPI dashboard data model", "Business Intelligence", 90, 32, 95, "+23%", True, "Design a clean SQL data layer that powers consistent performance and executive reporting."),
+                ("Data quality audit and cleanup pipeline", "Data Operations", 85, 28, 92, "+18%", True, "Find broken joins, duplicates and inconsistent fields before they impact management decisions."),
+                ("Schema migration planning for small teams", "Data Engineering", 74, 44, 84, "+9%", False, "Map database changes, downtime windows and rollback steps for safe migrations."),
+                ("Customer analytics event reporting pack", "Marketing Analytics", 82, 33, 90, "+17%", True, "Create a SQL-based reporting layer that explains conversion, drop-off and retention patterns."),
+                ("Data access layer for internal tools", "Engineering", 79, 38, 88, "+12%", False, "Build stable query patterns that power dashboards and internal apps without brittle logic."),
+            ]
+        elif "writing" in skill_key or "content" in skill_key:
+            domain_services = [
+                ("SEO blog content framework creation", "Content Strategy", 86, 30, 94, "+18%", True, "Develop repeatable article systems that answer buyer questions and attract organic traffic."),
+                ("LinkedIn thought leadership ghostwriting", "Personal Branding", 82, 39, 90, "+16%", True, "Draft practical, authority-building posts that help founders and experts stay visible online."),
+                ("Case study and success story package", "Marketing", 80, 41, 89, "+13%", True, "Turn client work into concise proof narratives that strengthen sales conversations."),
+                ("Email nurture sequence for lead conversion", "Automation", 78, 35, 88, "+12%", True, "Write a sequence of customer emails that builds trust and keeps prospects engaged over time."),
+                ("Product documentation cleanup", "Technical Writing", 72, 46, 84, "+7%", False, "Simplify usage resources and internal instructions so customer-facing knowledge is easier to understand."),
+            ]
+        else:
+            domain_services = [
+                (f"{skill} opportunity mapping and positioning", "Strategy", 82, 36, 90, "+14%", True, f"Translate {skill} expertise into a clear market offer with real, client-friendly deliverables."),
+                (f"{skill} workflow automation build", "Automation", 88, 34, 93, "+18%", True, f"Build repeatable {skill}-based workflows that cut manual effort and improve execution consistency."),
+                (f"{skill} portfolio case-study package", "Branding", 76, 42, 86, "+10%", True, f"Package proof of work around {skill} so buyers can understand the value and quality of the service."),
+                (f"{skill} client onboarding and delivery system", "Operations", 79, 39, 88, "+12%", False, f"Design a reliable process for delivering {skill}-related services from kickoff to handoff."),
+                (f"{skill} audit and improvement sprint", "Consulting", 72, 49, 83, "+8%", False, f"Review existing {skill} work, identify bottlenecks and give clients a high-impact improvement plan."),
+            ]
+
+        output = []
+        limited_services = domain_services[:8]
+        for index, (title, category, demand, competition, suitability, trend, beginner, description) in enumerate(limited_services, start=1):
+            output.append(
+                DecomposedSkill(
+                    id=f"skill-{base_idx + index}",
+                    skill=skill,
+                    microService=title,
+                    category=category,
+                    demand=demand,
+                    competition=competition,
+                    suitability=suitability,
+                    trend=trend,
+                    beginnerFriendly=beginner,
+                    description=description,
+                )
             )
-            for i, (title, cat, dem, comp, suit, trend, beg, desc) in enumerate(templates)
-        ]
+        return output
 
     # -------------------------------------------------------------
     # LAYER 2 & 3: MARKET INTELLIGENCE & OPPORTUNITY RANKING ENGINE

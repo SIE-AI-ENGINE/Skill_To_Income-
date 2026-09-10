@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   QueryClient,
   QueryClientProvider,
@@ -1467,6 +1467,7 @@ function DashboardPage() {
 function SkillsPage() {
   const [skills, setSkills] = useState("");
   const [filter, setFilter] = useState("All signals");
+  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const qc = useQueryClient();
   const filterParams = filter === "All signals" ? undefined : { filter };
   const q = useGetSkillDecomposition(filterParams, {
@@ -1480,6 +1481,19 @@ function SkillsPage() {
     },
   });
   const results = q.data ?? [];
+  const visibleSkills = useMemo(() => {
+    if (filter === "All signals") return results;
+    return results.filter((skill) => {
+      if (filter === "High demand") return skill.demand >= 80;
+      if (filter === "Low competition") return skill.competition <= 40;
+      if (filter === "Trending") {
+        return /^\+\d+%?$/.test((skill.trend ?? "").trim()) || /\+\d+/.test((skill.trend ?? "").trim());
+      }
+      if (filter === "Beginner friendly") return skill.beginnerFriendly === true;
+      return true;
+    });
+  }, [results, filter]);
+
   const submit = () => {
     const values = skills
       .split(",")
@@ -1547,8 +1561,8 @@ function SkillsPage() {
         onRetry={() => q.refetch()}
       >
         <div className="grid gap-3">
-          {results.length ? (
-            results.map((skill) => (
+          {visibleSkills.length ? (
+            visibleSkills.map((skill) => (
               <div
                 className="surface p-5 transition hover:border-primary/35"
                 key={skill.id}
@@ -1591,6 +1605,7 @@ function SkillsPage() {
                   <Button
                     variant="ghost"
                     className="shrink-0 px-2"
+                    onClick={() => setSelectedSkill(skill)}
                     testId={`button-view-skill-${skill.id}`}
                   >
                     View detail <ChevronRight size={15} />
@@ -1613,7 +1628,85 @@ function SkillsPage() {
           )}
         </div>
       </QueryState>
+      {selectedSkill && (
+        <SkillDetailSheet skill={selectedSkill} onClose={() => setSelectedSkill(null)} />
+      )}
     </Page>
+  );
+}
+
+function SkillDetailSheet({
+  skill,
+  onClose,
+}: {
+  skill: Skill;
+  onClose: () => void;
+}) {
+  const [, setLocation] = useLocation();
+
+  const handleFindOpportunities = () => {
+    onClose();
+    const serviceQuery = encodeURIComponent(skill.microService);
+    setLocation(`/opportunities?service=${serviceQuery}`);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-end bg-[#10213b]/55 p-4 backdrop-blur-sm md:items-center md:justify-center">
+      <div className="surface relative w-full max-w-md p-6 shadow-2xl md:rounded-2xl">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-lg p-2 text-muted-foreground hover:bg-secondary"
+          aria-label="Close detail panel"
+        >
+          <X size={17} />
+        </button>
+
+        <div className="eyebrow">Micro-service detail</div>
+        <h2 className="display mt-3 text-2xl font-extrabold tracking-[-.05em]">
+          {skill.microService}
+        </h2>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <StatusPill tone="slate">{skill.category}</StatusPill>
+          <StatusPill tone={skill.beginnerFriendly ? "green" : "amber"}>
+            {skill.beginnerFriendly ? "Beginner friendly" : "Advanced"}
+          </StatusPill>
+        </div>
+
+        <p className="mt-4 text-sm leading-6 text-muted-foreground">
+          {skill.description}
+        </p>
+
+        <div className="mt-6 space-y-3 rounded-2xl border border-border/70 bg-secondary/30 p-4">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Demand</span>
+            <span className="font-bold text-primary">{skill.demand}/100</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Market crowding</span>
+            <span className="font-bold text-amber-600">{skill.competition}/100</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">User fit</span>
+            <span className="font-bold text-emerald-600">{skill.suitability}/100</span>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <div className="mb-2 text-[11px] font-bold uppercase tracking-[.14em] text-muted-foreground">
+            Target deliverable
+          </div>
+          <p className="text-sm leading-6 text-foreground">
+            {skill.description}
+          </p>
+        </div>
+
+        <Button className="mt-6 w-full" onClick={handleFindOpportunities}>
+          Find opportunities for this service <ArrowRight size={15} />
+        </Button>
+      </div>
+    </div>
   );
 }
 function Score({
@@ -1879,6 +1972,7 @@ function MarketPage() {
 
 function OpportunitiesPage() {
   const params = useParams<{ id?: string }>();
+  const [location] = useLocation();
   const q = useGetOpportunities();
   const detail = useGetOpportunity(params.id ?? "", {
     query: {
@@ -1888,7 +1982,22 @@ function OpportunitiesPage() {
   });
   const [selected, setSelected] = useState<Opportunity | null>(null);
   const opportunities = q.data ?? [];
+  const serviceFilter = new URLSearchParams((location.split("?")[1] ?? "")).get("service");
+  const filteredOpportunities = serviceFilter
+    ? opportunities.filter((opp) =>
+        opp.title.toLowerCase().includes(serviceFilter.toLowerCase()) ||
+        opp.description.toLowerCase().includes(serviceFilter.toLowerCase()) ||
+        opp.tags.some((tag) => tag.toLowerCase().includes(serviceFilter.toLowerCase())),
+      )
+    : opportunities;
   const detailOpportunity = detail.data;
+  const activeOpportunity = selected ?? detailOpportunity ?? filteredOpportunities[0] ?? opportunities[0];
+
+  useEffect(() => {
+    if (!serviceFilter || !filteredOpportunities.length) return;
+    setSelected(filteredOpportunities[0]);
+  }, [serviceFilter, filteredOpportunities]);
+
   return (
     <Page
       eyebrow="03 / Decide"
@@ -1906,11 +2015,11 @@ function OpportunitiesPage() {
       >
         <div className="grid gap-5 lg:grid-cols-[1fr_390px]">
           <div className="space-y-3">
-            {opportunities.map((opp) => (
+            {filteredOpportunities.map((opp) => (
               <button
                 onClick={() => setSelected(opp)}
                 key={opp.id}
-                className={`surface block w-full p-5 text-left transition hover:-translate-y-0.5 hover:border-primary/40 ${selected?.id === opp.id ? "border-primary ring-2 ring-primary/10" : ""}`}
+                className={`surface block w-full p-5 text-left transition hover:-translate-y-0.5 hover:border-primary/40 ${activeOpportunity?.id === opp.id ? "border-primary ring-2 ring-primary/10" : ""}`}
                 data-testid={`card-opportunity-${opp.id}`}
               >
                 <div className="flex gap-4">
@@ -1976,7 +2085,7 @@ function OpportunitiesPage() {
             ))}
           </div>
           <OpportunityDetail
-            opportunity={selected ?? detailOpportunity ?? opportunities[0]}
+            opportunity={activeOpportunity}
           />
         </div>
       </QueryState>
