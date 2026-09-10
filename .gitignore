@@ -48,3 +48,6 @@ Thumbs.db
 # Legacy staging directory artifacts
 Downloads/Smart-Asset-Tracker/artifacts/sie-engine/node_modules/
 Downloads/Smart-Asset-Tracker/artifacts/sie-engine/dist/
+Downloads/
+**/node_modules/
+**/.tsbuildinfo
