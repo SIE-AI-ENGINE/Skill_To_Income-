@@ -17,12 +17,12 @@ jobs:
     name: Backend CI & Automated Tests
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: sqlite:///:memory:
-      SECRET_KEY: test-ci-secret-key-for-jwt-tokens
-      ALGORITHM: HS256
-      ACCESS_TOKEN_EXPIRE_MINUTES: 11520
+      DATABASE_URL: "sqlite:///:memory:"
+      SECRET_KEY: "test-ci-secret-key-for-jwt-tokens"
+      ALGORITHM: "HS256"
+      ACCESS_TOKEN_EXPIRE_MINUTES: "11520"
       PROJECT_NAME: "Skill to Income AI Engine (SIE)"
-      PYTHONPATH: backend:.
+      PYTHONPATH: "backend:."
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -71,4 +71,4 @@ jobs:
       - name: Validate Production Build
         run: pnpm run build
         env:
-          VITE_API_URL: http://localhost:8000/api/v1
+          VITE_API_URL: "http://localhost:8000/api/v1"
