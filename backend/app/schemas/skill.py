@@ -19,4 +19,8 @@ class SkillResponse(SkillBase):
     user_id: int
 
     class Config:
-        from_attributes = True
+        from_attributes = True
+
+class SkillBulkSyncRequest(BaseModel):
+    skills: List[str] = []
+

@@ -22,9 +22,34 @@ export const LoginBody = zod.object({
 export type LoginBodyType = zod.infer<typeof LoginBody>;
 
 export const AuthUser = zod.object({
-  id: zod.string(),
+  id: zod.union([zod.string(), zod.number()]),
   name: zod.string(),
   email: zod.string(),
-  onboarded: zod.boolean(),
+  onboarded: zod.boolean().optional(),
+  is_verified: zod.boolean().optional(),
+  onboarding_completed: zod.boolean().optional(),
+  github_username: zod.string().nullable().optional(),
+  linkedin_url: zod.string().nullable().optional(),
+  target_weekly_hours: zod.number().nullable().optional(),
 });
 export type AuthUserType = zod.infer<typeof AuthUser>;
+
+export const VerifyEmailBody = zod.object({
+  email: zod.string().email(),
+  otp: zod.string().min(6).max(6),
+});
+export type VerifyEmailBodyType = zod.infer<typeof VerifyEmailBody>;
+
+export const ResendOtpBody = zod.object({
+  email: zod.string().email(),
+});
+export type ResendOtpBodyType = zod.infer<typeof ResendOtpBody>;
+
+export const OnboardingCompleteBody = zod.object({
+  github_username: zod.string().optional(),
+  linkedin_url: zod.string().optional(),
+  target_weekly_hours: zod.number().optional(),
+  skills: zod.array(zod.string()),
+});
+export type OnboardingCompleteBodyType = zod.infer<typeof OnboardingCompleteBody>;
+

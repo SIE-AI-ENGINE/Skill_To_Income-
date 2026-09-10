@@ -78,7 +78,7 @@ def generate_and_persist_income_kit(
     current_user: User = Depends(get_current_user),
 ) -> Any:
     title = payload.opportunityTitle or "Client Automation & API Service"
-    generated_kit = ai_engine_service.generate_income_kit(payload.opportunityId, title)
+    generated_kit = ai_engine_service.generate_income_kit(payload.opportunityId, title, user=current_user)
 
     # Persist the 4 bundled asset blueprints into the user's income_kits table
     assets_by_type = {a.type: a.model_dump() for a in generated_kit.assets}

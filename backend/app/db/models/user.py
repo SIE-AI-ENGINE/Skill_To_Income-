@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Float
+from sqlalchemy import Column, Integer, String, DateTime, Float, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -10,8 +10,17 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     full_name = Column(String, nullable=True)
+
+    # Verification and security attributes
+    is_verified = Column(Boolean, default=False, nullable=False)
+    verification_otp = Column(String, nullable=True)
+    otp_expires_at = Column(DateTime(timezone=True), nullable=True)
     
-    # Onboarding attributes
+    # Onboarding & Professional Footprint attributes
+    github_username = Column(String, nullable=True)
+    linkedin_url = Column(String, nullable=True)
+    target_weekly_hours = Column(Integer, default=10, nullable=True)
+    onboarding_completed = Column(Boolean, default=False, nullable=False)
     education = Column(String, nullable=True)
     experience = Column(String, nullable=True)
     income_goal = Column(Float, nullable=True)  # e.g. 50000.0

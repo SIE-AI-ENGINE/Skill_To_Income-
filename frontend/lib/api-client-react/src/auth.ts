@@ -14,7 +14,14 @@ import type {
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
-import type { AuthUserType, LoginBodyType, SignupBodyType } from "@workspace/api-zod";
+import type {
+  AuthUserType,
+  LoginBodyType,
+  SignupBodyType,
+  VerifyEmailBodyType,
+  ResendOtpBodyType,
+  OnboardingCompleteBodyType,
+} from "@workspace/api-zod";
 import { customFetch } from "./custom-fetch";
 import type { ErrorType } from "./custom-fetch";
 
@@ -38,7 +45,16 @@ export function useMe(
     queryKey,
     queryFn: async () => {
       try {
-        return await getMe();
+        const u = await getMe();
+        if (!u) return null;
+        return {
+          ...u,
+          id: String(u.id),
+          name: u.name || (u as any).full_name || "User",
+          onboarded: Boolean(u.onboarded || u.onboarding_completed),
+          is_verified: Boolean(u.is_verified),
+          onboarding_completed: Boolean(u.onboarding_completed),
+        };
       } catch (err) {
         if ((err as ErrorType<unknown>)?.status === 401) return null;
         throw err;
@@ -71,7 +87,12 @@ export const signup = async (
     id: String(user.id),
     name: user.name || user.full_name || "User",
     email: user.email,
-    onboarded: Boolean(user.onboarded),
+    onboarded: Boolean(user.onboarded || user.onboarding_completed),
+    is_verified: Boolean(user.is_verified),
+    onboarding_completed: Boolean(user.onboarding_completed),
+    github_username: user.github_username ?? null,
+    linkedin_url: user.linkedin_url ?? null,
+    target_weekly_hours: user.target_weekly_hours ?? 10,
   };
 };
 
@@ -109,7 +130,12 @@ export const login = async (
     id: String(user.id),
     name: user.name || user.full_name || "User",
     email: user.email,
-    onboarded: Boolean(user.onboarded),
+    onboarded: Boolean(user.onboarded || user.onboarding_completed),
+    is_verified: Boolean(user.is_verified),
+    onboarding_completed: Boolean(user.onboarding_completed),
+    github_username: user.github_username ?? null,
+    linkedin_url: user.linkedin_url ?? null,
+    target_weekly_hours: user.target_weekly_hours ?? 10,
   };
 };
 
@@ -127,6 +153,109 @@ export function useLogin<TError = ErrorType<unknown>, TContext = unknown>(
   });
 }
 
+export const verifyEmail = async (
+  body: VerifyEmailBodyType,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<AuthUserType> => {
+  const data = await customFetch<any>("/api/auth/verify-email", {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+  const token = data?.access_token;
+  if (token && typeof window !== "undefined") {
+    window.localStorage.setItem("access_token", token);
+    window.localStorage.setItem("sie_token", token);
+  }
+  const user = data?.user || data;
+  return {
+    id: String(user.id),
+    name: user.name || user.full_name || "User",
+    email: user.email,
+    onboarded: Boolean(user.onboarded || user.onboarding_completed),
+    is_verified: Boolean(user.is_verified),
+    onboarding_completed: Boolean(user.onboarding_completed),
+    github_username: user.github_username ?? null,
+    linkedin_url: user.linkedin_url ?? null,
+    target_weekly_hours: user.target_weekly_hours ?? 10,
+  };
+};
+
+export function useVerifyEmail<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<AuthUserType, TError, VerifyEmailBodyType, TContext> },
+): UseMutationResult<AuthUserType, TError, VerifyEmailBodyType, TContext> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: VerifyEmailBodyType) => verifyEmail(body),
+    ...options?.mutation,
+    onSuccess: (data, variables, onMutateResult, context) => {
+      queryClient.setQueryData(getMeQueryKey(), data);
+      options?.mutation?.onSuccess?.(data, variables, onMutateResult, context);
+    },
+  });
+}
+
+export const resendOtp = async (
+  body: ResendOtpBodyType,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<{ message: string }> => {
+  return customFetch<{ message: string }>("/api/auth/resend-otp", {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+};
+
+export function useResendOtp<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<{ message: string }, TError, ResendOtpBodyType, TContext> },
+): UseMutationResult<{ message: string }, TError, ResendOtpBodyType, TContext> {
+  return useMutation({
+    mutationFn: (body: ResendOtpBodyType) => resendOtp(body),
+    ...options?.mutation,
+  });
+}
+
+export const completeOnboarding = async (
+  body: OnboardingCompleteBodyType,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<AuthUserType> => {
+  const data = await customFetch<any>("/api/onboarding/complete", {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+  const user = data?.user || data;
+  return {
+    id: String(user.id),
+    name: user.name || user.full_name || "User",
+    email: user.email,
+    onboarded: true,
+    is_verified: true,
+    onboarding_completed: true,
+    github_username: user.github_username ?? null,
+    linkedin_url: user.linkedin_url ?? null,
+    target_weekly_hours: user.target_weekly_hours ?? 10,
+  };
+};
+
+export function useCompleteOnboarding<TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<AuthUserType, TError, OnboardingCompleteBodyType, TContext> },
+): UseMutationResult<AuthUserType, TError, OnboardingCompleteBodyType, TContext> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: OnboardingCompleteBodyType) => completeOnboarding(body),
+    ...options?.mutation,
+    onSuccess: (data, variables, onMutateResult, context) => {
+      queryClient.setQueryData(getMeQueryKey(), data);
+      queryClient.invalidateQueries({ queryKey: getMeQueryKey() });
+      options?.mutation?.onSuccess?.(data, variables, onMutateResult, context);
+    },
+  });
+}
+
 export const logout = async (options?: Parameters<typeof customFetch>[1]): Promise<void> => {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem("access_token");
@@ -134,7 +263,6 @@ export const logout = async (options?: Parameters<typeof customFetch>[1]): Promi
   }
   return customFetch<void>("/api/auth/logout", { ...options, method: "POST" });
 };
-
 
 export function useLogout<TError = ErrorType<unknown>, TContext = unknown>(
   options?: { mutation?: UseMutationOptions<void, TError, void, TContext> },
@@ -150,3 +278,4 @@ export function useLogout<TError = ErrorType<unknown>, TContext = unknown>(
     },
   });
 }
+

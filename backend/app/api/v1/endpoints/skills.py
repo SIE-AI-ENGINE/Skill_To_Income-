@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user
 from app.db.models.skill import Skill
 from app.db.models.user import User
-from app.schemas.skill import SkillCreate, SkillResponse, SkillUpdate
+from app.schemas.skill import SkillCreate, SkillResponse, SkillUpdate, SkillBulkSyncRequest
 from app.schemas.sie import DecomposedSkill, DecomposeSkillsBody
 from app.services.ai_engine import ai_engine_service
 
@@ -38,6 +38,42 @@ def get_skills(
 ) -> Any:
     skills = db.query(Skill).filter(Skill.user_id == current_user.id).all()
     return skills
+
+@router.put("/", response_model=List[SkillResponse])
+def sync_user_skills(
+    payload: SkillBulkSyncRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """Synchronizes active user skills and re-runs AI decomposition."""
+    clean_skills = [str(s).strip() for s in payload.skills if str(s).strip()]
+    db.query(Skill).filter(Skill.user_id == current_user.id).delete()
+
+    if not clean_skills:
+        db.commit()
+        return []
+
+    decomposed = ai_engine_service.decompose_input_skills(clean_skills)
+    created_skills = []
+    for skill_name in clean_skills:
+        nodes = [d.model_dump() for d in decomposed if d.skill.lower() == skill_name.lower()]
+        if not nodes:
+            nodes = [d.model_dump() for d in decomposed]
+        tags = list({d.get("category", "General") for d in nodes} | {skill_name})
+
+        db_skill = Skill(
+            user_id=current_user.id,
+            core_skill=skill_name,
+            detected_tags=tags,
+            decomposed_nodes=nodes,
+        )
+        db.add(db_skill)
+        created_skills.append(db_skill)
+
+    db.commit()
+    for s in created_skills:
+        db.refresh(s)
+    return created_skills
 
 @router.put("/{skill_id}", response_model=SkillResponse)
 def update_skill(

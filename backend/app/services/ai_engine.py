@@ -250,8 +250,19 @@ class SIEEngine:
     # -------------------------------------------------------------
     # LAYER 4: EXECUTION BLUEPRINT (INCOME KIT GENERATOR)
     # -------------------------------------------------------------
-    def generate_income_kit(self, opportunity_id: str, opp_title: str = "Client Automation Deliverable") -> IncomeKitResponse:
-        """Generates platform-ready listings, portfolio projects, landing pages, and cold pitches."""
+    def generate_income_kit(
+        self,
+        opportunity_id: str,
+        opp_title: str = "Client Automation Deliverable",
+        user: Optional[Any] = None,
+    ) -> IncomeKitResponse:
+        """Generates platform-ready listings, portfolio projects, landing pages, and cold pitches with verified user details."""
+        user_name = getattr(user, "full_name", None) or getattr(user, "name", None) or "Specialist"
+        user_email = getattr(user, "email", None) or "expert@example.com"
+        github_user = getattr(user, "github_username", None) or "developer"
+        linkedin_url = getattr(user, "linkedin_url", None) or "https://linkedin.com"
+        slug = re.sub(r"[^a-zA-Z0-9]+", "-", opp_title.lower()).strip("-")
+
         # Check for LLM generation
         llm_kit = self._llm_generate_kit(opp_title)
         if llm_kit:
@@ -271,6 +282,7 @@ class SIEEngine:
                     status="Ready to edit",
                     content=self._clean_content(
                         f"I will deliver a complete, high-performance {opp_title.lower()} tailored for your workflow.\n\n"
+                        f"Service Specialist: {user_name} ({user_email})\n\n"
                         "Included: full implementation, a walkthrough, and 14 days of post-delivery bug support."
                     ),
                     description="Optimized service listing with clear deliverables and client guarantees."
@@ -281,8 +293,12 @@ class SIEEngine:
                     title=f"{opp_title} Proof of Concept Case Study",
                     status="Ready to edit",
                     content=self._clean_content(
-                        f"Case Study: {opp_title}. Problem: manual bottlenecks caused delayed turnaround and reporting errors. "
-                        "Solution: an automated pipeline with validation. Impact: faster delivery and more reliable reporting."
+                        f"# {opp_title}\n\n"
+                        f"**Author**: {user_name} ([@{github_user}](https://github.com/{github_user}))\n"
+                        f"**Repository**: https://github.com/{github_user}/{slug}\n\n"
+                        "## Problem Statement\nManual bottlenecks caused delayed turnaround and reporting errors.\n\n"
+                        "## Solution Architecture\nAn automated, resilient pipeline with schema validation and retry mechanics.\n\n"
+                        "## Measurable Impact\nFaster execution velocity, reduced operational costs, and 99.9% uptime."
                     ),
                     description="Portfolio demonstration demonstrating measurable business impact."
                 ),
@@ -293,7 +309,11 @@ class SIEEngine:
                     status="Ready to edit",
                     content=self._clean_content(
                         f"Stop losing hours to repetitive execution. Get custom-built {opp_title.lower()} "
-                        "delivered with zero setup friction. Book a strategy call or view a live demo."
+                        "delivered with zero setup friction.\n\n"
+                        f"**Direct Inquiries**: {user_email}\n"
+                        f"**LinkedIn**: {linkedin_url}\n"
+                        f"**GitHub Portfolio**: https://github.com/{github_user}\n\n"
+                        "Book a strategy call or view the live demonstration."
                     ),
                     description="High-converting single page copy outline for direct client outreach."
                 ),
@@ -303,14 +323,21 @@ class SIEEngine:
                     title="Cold Email & LinkedIn Pitch Sequence",
                     status="Ready to edit",
                     content=self._clean_content(
+                        f"Subject: Production-grade solution for {opp_title.lower()}\n"
+                        f"Reply-To: {user_email}\n\n"
                         "Hello,\n\nI saw your team is expanding operations. I recently built a specialized "
-                        f"solution for {opp_title.lower()} that cuts execution time in half.\n\n"
-                        "Mind if I share a 60-second video walkthrough of how it works?\n\nBest regards,\nThe SIE team"
+                        f"production solution for {opp_title.lower()} that cuts execution time in half.\n\n"
+                        "Mind if I share a 60-second video walkthrough of how it works?\n\n"
+                        f"Best regards,\n{user_name}\n"
+                        f"Direct Email: {user_email}\n"
+                        f"GitHub: https://github.com/{github_user}\n"
+                        f"LinkedIn: {linkedin_url}"
                     ),
                     description="Value-first cold outreach script targeting decision makers."
                 )
             ]
         )
+
 
     def _llm_generate_kit(self, title: str) -> Optional[IncomeKitResponse]:
         if not groq_client or not os.getenv("GROQ_API_KEY"):

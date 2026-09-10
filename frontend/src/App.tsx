@@ -49,6 +49,7 @@ import { Link, Route, Switch, useLocation, useParams } from "wouter";
 import {
   getGetAssetsQueryKey,
   getGetIncomeKitQueryKey,
+  getGetOpportunitiesQueryKey,
   getGetOpportunityQueryKey,
   getGetProfileQueryKey,
   getGetSkillDecompositionQueryKey,
@@ -114,6 +115,7 @@ function Button({
   variant = "primary",
   className = "",
   onClick,
+  disabled = false,
   type = "button",
   testId,
 }: {
@@ -121,6 +123,7 @@ function Button({
   variant?: "primary" | "secondary" | "ghost" | "dark";
   className?: string;
   onClick?: () => void;
+  disabled?: boolean;
   type?: "button" | "submit";
   testId?: string;
 }) {
@@ -128,8 +131,9 @@ function Button({
     <button
       type={type}
       onClick={onClick}
+      disabled={disabled}
       data-testid={testId}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 active:scale-[.98] ${variant === "primary" ? "bg-primary text-primary-foreground shadow-[0_8px_20px_rgba(33,105,195,.18)] hover:-translate-y-0.5 hover:brightness-105" : variant === "dark" ? "bg-[#17263e] text-white hover:bg-[#203451]" : variant === "secondary" ? "border border-border bg-card text-foreground hover:border-primary/40 hover:bg-secondary" : "text-muted-foreground hover:bg-secondary hover:text-primary"} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 active:scale-[.98] ${disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : ""} ${variant === "primary" ? "bg-primary text-primary-foreground shadow-[0_8px_20px_rgba(33,105,195,.18)] hover:-translate-y-0.5 hover:brightness-105" : variant === "dark" ? "bg-[#17263e] text-white hover:bg-[#203451]" : variant === "secondary" ? "border border-border bg-card text-foreground hover:border-primary/40 hover:bg-secondary" : "text-muted-foreground hover:bg-secondary hover:text-primary"} ${className}`}
     >
       {children}
     </button>
@@ -2702,18 +2706,29 @@ function SettingsPage() {
     availability: "",
     incomeGoal: "",
     workType: "",
+    githubUsername: "",
+    linkedinUrl: "",
+    targetWeeklyHours: 10,
+    skills: [] as string[],
   });
+  const [newSkill, setNewSkill] = useState("");
+
   useEffect(() => {
     if (!p) return;
     setForm({
-      name: p.name,
-      email: p.email,
-      experience: p.experience,
-      availability: p.availability,
-      incomeGoal: p.incomeGoal,
-      workType: p.workType,
+      name: p.name || "",
+      email: p.email || "",
+      experience: p.experience || "",
+      availability: p.availability || "",
+      incomeGoal: p.incomeGoal || "",
+      workType: p.workType || "",
+      githubUsername: (p as any).githubUsername || "",
+      linkedinUrl: (p as any).linkedinUrl || "",
+      targetWeeklyHours: (p as any).targetWeeklyHours || 10,
+      skills: p.skills || [],
     });
   }, [p]);
+
   const [saved, setSaved] = useState(false);
   const save = () =>
     update.mutate(
@@ -2722,10 +2737,24 @@ function SettingsPage() {
         onSuccess: () => {
           setSaved(true);
           qc.invalidateQueries({ queryKey: getGetProfileQueryKey() });
+          qc.invalidateQueries({ queryKey: getGetSkillDecompositionQueryKey() });
+          qc.invalidateQueries({ queryKey: getGetOpportunitiesQueryKey() });
           setTimeout(() => setSaved(false), 2200);
         },
       },
     );
+
+  const addSkill = () => {
+    const clean = newSkill.trim();
+    if (!clean || form.skills.includes(clean)) return;
+    setForm({ ...form, skills: [...form.skills, clean] });
+    setNewSkill("");
+  };
+
+  const removeSkill = (skillToRemove: string) => {
+    setForm({ ...form, skills: form.skills.filter((s) => s !== skillToRemove) });
+  };
+
   if (!p) {
     return (
       <Page eyebrow="Account" title="Settings">
@@ -2762,7 +2791,7 @@ function SettingsPage() {
                 <div>
                   <h3 className="font-extrabold">Profile details</h3>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    What SIE uses to calibrate your recommendations.
+                    What SIE uses to calibrate your recommendations and outreach identity.
                   </p>
                 </div>
                 <UserRound size={18} className="text-primary" />
@@ -2774,23 +2803,47 @@ function SettingsPage() {
                   onChange={(v) => setForm({ ...form, name: v })}
                   testId="input-profile-name"
                 />
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-foreground">Email</label>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
+                      <ShieldCheck size={12} /> Verified
+                    </span>
+                  </div>
+                  <input
+                    value={form.email}
+                    disabled
+                    className="mt-2 h-10 w-full rounded-xl border border-input bg-secondary/50 px-3.5 text-xs text-muted-foreground outline-none cursor-not-allowed"
+                  />
+                </div>
                 <Field
-                  label="Email"
-                  value={form.email}
-                  onChange={(v) => setForm({ ...form, email: v })}
-                  testId="input-profile-email"
+                  label="GitHub Username"
+                  value={form.githubUsername}
+                  onChange={(v) => setForm({ ...form, githubUsername: v })}
+                  placeholder="e.g. octocat"
+                  testId="input-profile-github"
+                />
+                <Field
+                  label="LinkedIn URL"
+                  value={form.linkedinUrl}
+                  onChange={(v) => setForm({ ...form, linkedinUrl: v })}
+                  placeholder="https://linkedin.com/in/username"
+                  testId="input-profile-linkedin"
+                />
+                <Field
+                  label="Target Weekly Hours"
+                  value={String(form.targetWeeklyHours)}
+                  onChange={(v) => {
+                    const num = parseInt(v, 10);
+                    setForm({ ...form, targetWeeklyHours: isNaN(num) ? 10 : num });
+                  }}
+                  testId="input-profile-hours"
                 />
                 <Field
                   label="Experience"
                   value={form.experience}
                   onChange={(v) => setForm({ ...form, experience: v })}
                   testId="input-profile-experience"
-                />
-                <Field
-                  label="Availability"
-                  value={form.availability}
-                  onChange={(v) => setForm({ ...form, availability: v })}
-                  testId="input-profile-availability"
                 />
                 <Field
                   label="Income goal"
@@ -2811,21 +2864,48 @@ function SettingsPage() {
                 <div>
                   <h3 className="font-extrabold">Your skills</h3>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    These inputs feed decomposition and ranking.
+                    Modifying skills triggers automatic re-decomposition and market recalibration.
                   </p>
                 </div>
-                <Link
-                  href="/skills"
-                  className="text-xs font-bold text-primary"
-                  data-testid="link-settings-skills"
-                >
-                  Edit skills
-                </Link>
+                <span className="text-xs font-bold text-muted-foreground">
+                  {form.skills.length} active
+                </span>
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
-                {p.skills.map((skill) => (
-                  <StatusPill key={skill}>{skill}</StatusPill>
+                {form.skills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary"
+                  >
+                    {skill}
+                    <button
+                      type="button"
+                      onClick={() => removeSkill(skill)}
+                      className="hover:text-destructive"
+                      aria-label={`Remove ${skill}`}
+                    >
+                      <X size={13} />
+                    </button>
+                  </span>
                 ))}
+              </div>
+              <div className="mt-4 flex gap-2">
+                <input
+                  type="text"
+                  value={newSkill}
+                  onChange={(e) => setNewSkill(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addSkill();
+                    }
+                  }}
+                  placeholder="Add skill (e.g. Next.js, PyTorch)..."
+                  className="h-10 flex-1 rounded-xl border border-input bg-background px-3.5 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                <Button variant="secondary" onClick={addSkill} className="h-10 text-xs">
+                  <Plus size={14} /> Add
+                </Button>
               </div>
             </div>
           </div>
@@ -2864,11 +2944,13 @@ function Field({
   label,
   value,
   onChange,
+  placeholder,
   testId,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  placeholder?: string;
   testId: string;
 }) {
   return (
@@ -2877,6 +2959,7 @@ function Field({
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
         className="mt-2 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm font-normal outline-none focus:ring-4 focus:ring-primary/10"
         data-testid={testId}
       />
@@ -2939,125 +3022,422 @@ function Toggle({
   );
 }
 
-function OnboardingModal({ onDone }: { onDone: () => void }) {
-  const { markOnboarded } = useAuth();
-  const update = useUpdateProfile();
-  const qc = useQueryClient();
-  const [step, setStep] = useState(0);
-  const [skills, setSkills] = useState("");
-  const [availability, setAvailability] = useState("");
+function VerifyEmailScreen() {
+  const { user, verifyEmail, resendOtp, logout } = useAuth();
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const steps = [
-    {
-      title: "Start with your useful skills",
-      copy: "List the tools, subjects or abilities you have used recently, separated by commas.",
-      placeholder: "e.g. Excel, photography, research",
-    },
-    {
-      title: "What kind of work fits?",
-      copy: "Tell SIE enough to filter out opportunities that do not fit your life.",
-      placeholder: "e.g. 5 hours weekly, async work",
-    },
-  ];
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
-  const finish = (markComplete: boolean) => {
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || otp.trim().length !== 6) return;
     setError(null);
-    const skillList = skills
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    update.mutate(
-      {
-        data: {
-          onboarded: true,
-          ...(markComplete && skillList.length > 0
-            ? { skills: skillList }
-            : {}),
-          ...(markComplete && availability.trim()
-            ? { availability: availability.trim() }
-            : {}),
-        },
-      },
-      {
-        onSuccess: () => {
-          qc.setQueryData(getMeQueryKey(), (old: any) =>
-            old ? { ...old, onboarded: true } : old,
-          );
-          qc.invalidateQueries({ queryKey: getMeQueryKey() });
-          qc.invalidateQueries({ queryKey: getGetProfileQueryKey() });
-          markOnboarded();
-          onDone();
-        },
-        onError: (err) =>
-          setError(
-            authErrorMessage(
-              err,
-              "Could not save your answers. You can update this later in Settings.",
-            ),
-          ),
-      },
-    );
+    setVerifying(true);
+    try {
+      await verifyEmail(user.email, otp.trim());
+    } catch (err) {
+      setError(authErrorMessage(err, "Invalid or expired verification code."));
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!user) return;
+    setResending(true);
+    setError(null);
+    try {
+      await resendOtp(user.email);
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 4000);
+    } catch (err) {
+      setError(authErrorMessage(err, "Failed to resend verification code."));
+    } finally {
+      setResending(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-[#10213b]/55 p-4 backdrop-blur-sm">
-      <div className="surface w-full max-w-lg p-7 md:p-9">
-        <div className="flex items-center justify-between">
-          <Logo />
-          <span className="mono text-[10px] text-muted-foreground">
-            STEP {step + 1} / 2
-          </span>
-        </div>
-        <div className="mt-10">
-          <div className="eyebrow">A two-minute setup</div>
-          <h2 className="display mt-3 text-3xl font-extrabold tracking-[-.06em]">
-            {steps[step].title}
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            {steps[step].copy}
+    <div className="fixed inset-0 z-50 grid place-items-center bg-[#10213b]/60 p-4 backdrop-blur-md">
+      <div className="surface animate-rise w-full max-w-md p-8 shadow-2xl">
+        <div className="text-center">
+          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <ShieldCheck size={32} />
+          </div>
+          <h2 className="display text-2xl font-extrabold tracking-tight">Verify Your Email Address</h2>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            We sent a 6-digit confirmation code to{" "}
+            <span className="font-semibold text-foreground">{user?.email}</span>.
+            Enter it below to activate your account.
           </p>
-          <textarea
-            value={step === 0 ? skills : availability}
-            onChange={(e) =>
-              step === 0
-                ? setSkills(e.target.value)
-                : setAvailability(e.target.value)
-            }
-            className="mt-6 min-h-[110px] w-full resize-none rounded-xl border border-input bg-background p-4 text-sm outline-none focus:ring-4 focus:ring-primary/10"
-            placeholder={steps[step].placeholder}
-            data-testid={`textarea-onboarding-${step}`}
-          />
+        </div>
+
+        <div className="my-5 rounded-xl border border-primary/20 bg-primary/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
+          <span className="font-bold text-primary">Local Development Note:</span> Check your backend terminal output for:
+          <div className="mono mt-1 select-all font-semibold text-foreground">
+            [AUTH] Verification OTP for {user?.email}: ******
+          </div>
+        </div>
+
+        <form onSubmit={handleVerify} className="space-y-4">
+          <div>
+            <label className="block text-center text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
+              Enter 6-Digit Code
+            </label>
+            <input
+              type="text"
+              maxLength={6}
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+              className="h-14 w-full text-center font-mono text-3xl font-bold tracking-[0.4em] rounded-xl border border-input bg-background outline-none ring-primary/20 transition focus:ring-4 focus:border-primary"
+              placeholder="••••••"
+              autoFocus
+              required
+              data-testid="input-otp"
+            />
+          </div>
+
           {error && (
-            <p
-              className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive"
-              data-testid="text-onboarding-error"
-            >
+            <p className="rounded-lg bg-destructive/10 p-3 text-center text-xs font-semibold text-destructive" data-testid="text-verify-error">
               {error}
             </p>
           )}
-        </div>
-        <div className="mt-8 flex items-center justify-between">
-          <button
-            onClick={() => finish(false)}
-            className="text-xs font-bold text-muted-foreground hover:text-primary"
-            data-testid="button-skip-onboarding"
-          >
-            Skip for now
-          </button>
-          <Button
-            onClick={() => (step === 1 ? finish(true) : setStep(1))}
-            testId="button-next-onboarding"
-          >
-            {update.isPending ? (
-              <Loader2 size={15} className="animate-spin" />
-            ) : (
-              <>
-                {step === 1 ? "Open my workspace" : "Continue"}{" "}
-                <ArrowRight size={15} />
-              </>
-            )}
+
+          {resendSuccess && (
+            <p className="rounded-lg bg-emerald-500/10 p-2.5 text-center text-xs font-semibold text-emerald-600">
+              New verification code sent! Check your terminal log.
+            </p>
+          )}
+
+          <Button type="submit" className="h-12 w-full text-sm font-bold" testId="button-verify-email">
+            {verifying ? <Loader2 size={16} className="animate-spin" /> : <>Verify & Continue <ArrowRight size={16} /></>}
           </Button>
+        </form>
+
+        <div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4 text-xs">
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resending}
+            className="font-semibold text-primary hover:underline disabled:opacity-50"
+            data-testid="button-resend-otp"
+          >
+            {resending ? "Sending..." : "Resend code"}
+          </button>
+          <button
+            type="button"
+            onClick={() => logout()}
+            className="font-medium text-muted-foreground hover:text-foreground"
+            data-testid="button-verify-logout"
+          >
+            Sign out
+          </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function OnboardingWizard({ onDone }: { onDone: () => void }) {
+  const { user, completeOnboarding } = useAuth();
+  const [step, setStep] = useState(0);
+  const [github, setGithub] = useState(user?.github_username || "");
+  const [linkedin, setLinkedin] = useState(user?.linkedin_url || "");
+  const [hours, setHours] = useState(user?.target_weekly_hours || 10);
+  const [skills, setSkills] = useState<string[]>([
+    "Python",
+    "FastAPI",
+    "React",
+    "Automation",
+  ]);
+  const [newSkill, setNewSkill] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const quickSkills = [
+    "Python",
+    "FastAPI",
+    "React",
+    "TypeScript",
+    "Data Science",
+    "Automation",
+    "Docker",
+    "Machine Learning",
+    "PostgreSQL",
+    "Next.js",
+  ];
+
+  const addSkill = (s: string) => {
+    const clean = s.trim();
+    if (clean && !skills.includes(clean)) {
+      setSkills([...skills, clean]);
+    }
+  };
+
+  const removeSkill = (s: string) => {
+    setSkills(skills.filter((item) => item !== s));
+  };
+
+  const handleFinish = async () => {
+    if (skills.length === 0) {
+      setError("Please add at least one core skill to decompose.");
+      return;
+    }
+    setError(null);
+    setSubmitting(true);
+    try {
+      await completeOnboarding({
+        github_username: github.trim() || undefined,
+        linkedin_url: linkedin.trim() || undefined,
+        target_weekly_hours: hours,
+        skills,
+      });
+      onDone();
+    } catch (err) {
+      setError(authErrorMessage(err, "Failed to complete onboarding."));
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-[#10213b]/60 p-4 backdrop-blur-md">
+      <div className="surface animate-rise w-full max-w-xl p-8 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border/70 pb-4">
+          <Logo />
+          <span className="mono text-[11px] font-bold text-primary">
+            STEP {step + 1} / 3
+          </span>
+        </div>
+
+        {step === 0 && (
+          <div className="mt-6">
+            <div className="eyebrow text-primary">Step 1: Professional Footprint</div>
+            <h2 className="display mt-2 text-2xl font-extrabold tracking-tight">
+              Connect Your Public Presence
+            </h2>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              SIE injects these details directly into your generated GitHub portfolio case studies, outreach signatures, and portfolio landing pages.
+            </p>
+
+            <div className="mt-6 space-y-4">
+              <div>
+                <label className="flex items-center gap-2 text-xs font-bold text-foreground">
+                  <Github size={14} className="text-primary" /> GitHub Handle
+                </label>
+                <input
+                  type="text"
+                  value={github}
+                  onChange={(e) => setGithub(e.target.value)}
+                  placeholder="e.g. octocat"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-background px-3.5 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  data-testid="input-onboarding-github"
+                />
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-xs font-bold text-foreground">
+                  <Globe2 size={14} className="text-primary" /> LinkedIn Profile URL
+                </label>
+                <input
+                  type="url"
+                  value={linkedin}
+                  onChange={(e) => setLinkedin(e.target.value)}
+                  placeholder="https://linkedin.com/in/username"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-background px-3.5 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                  data-testid="input-onboarding-linkedin"
+                />
+              </div>
+            </div>
+
+            <div className="mt-8 flex justify-end">
+              <Button onClick={() => setStep(1)} testId="button-onboarding-step1-next">
+                Next: Primary Skills <ArrowRight size={15} />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="mt-6">
+            <div className="eyebrow text-primary">Step 2: Core Skills & Availability</div>
+            <h2 className="display mt-2 text-2xl font-extrabold tracking-tight">
+              What capabilities are you ready to monetize?
+            </h2>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              Select or add your technical competencies. SIE decomposes each skill into sellable micro-services.
+            </p>
+
+            <div className="mt-5">
+              <label className="block text-xs font-bold text-foreground mb-2">
+                Active Skills ({skills.length})
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {skills.map((s) => (
+                  <span
+                    key={s}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary"
+                  >
+                    {s}
+                    <button type="button" onClick={() => removeSkill(s)} className="hover:text-destructive">
+                      <X size={13} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="text"
+                  value={newSkill}
+                  onChange={(e) => setNewSkill(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addSkill(newSkill);
+                      setNewSkill("");
+                    }
+                  }}
+                  placeholder="Type a skill and hit Add..."
+                  className="h-10 flex-1 rounded-xl border border-input bg-background px-3.5 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    addSkill(newSkill);
+                    setNewSkill("");
+                  }}
+                  className="h-10 text-xs"
+                >
+                  <Plus size={14} /> Add
+                </Button>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span className="font-semibold">Suggestions:</span>
+                {quickSkills.map((qs) => (
+                  <button
+                    key={qs}
+                    type="button"
+                    onClick={() => addSkill(qs)}
+                    className="rounded-md bg-secondary px-2 py-0.5 hover:bg-primary/10 hover:text-primary transition"
+                  >
+                    + {qs}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-border/70 pt-5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-foreground">
+                  Target Availability: <span className="text-primary font-mono">{hours} hours / week</span>
+                </label>
+              </div>
+              <input
+                type="range"
+                min={5}
+                max={40}
+                step={5}
+                value={hours}
+                onChange={(e) => setHours(parseInt(e.target.value, 10))}
+                className="mt-2 w-full accent-primary"
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>5 hrs (Side experiment)</span>
+                <span>20 hrs (Part-time)</span>
+                <span>40 hrs (Full-time)</span>
+              </div>
+            </div>
+
+            <div className="mt-8 flex justify-between">
+              <Button variant="ghost" onClick={() => setStep(0)}>
+                Back
+              </Button>
+              <Button onClick={() => setStep(2)} testId="button-onboarding-step2-next">
+                Preview Intelligence <ArrowRight size={15} />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="mt-6">
+            <div className="eyebrow text-primary">Step 3: Engine Calibration Ready</div>
+            <h2 className="display mt-2 text-2xl font-extrabold tracking-tight">
+              Ready to Launch Your Income Engine
+            </h2>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              SIE has calibrated your market targets based on your professional footprint and selected skills.
+            </p>
+
+            <div className="mt-5 space-y-3">
+              <div className="surface-tight p-4">
+                <div className="text-[11px] font-bold text-primary uppercase tracking-wide">
+                  Engine Footprint Integration
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Email Identity:</span>
+                    <div className="font-semibold">{user?.email}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">GitHub:</span>
+                    <div className="font-semibold">{github || "Not connected"}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">LinkedIn:</span>
+                    <div className="font-semibold truncate">{linkedin || "Not connected"}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Weekly Target:</span>
+                    <div className="font-semibold">{hours} hours / week</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="surface-tight p-4">
+                <div className="text-[11px] font-bold text-primary uppercase tracking-wide">
+                  Initial Decomposed Skills Pipeline
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {skills.map((s) => (
+                    <span key={s} className="rounded-md bg-secondary px-2.5 py-1 text-xs font-semibold">
+                      ⚡ {s} Service Delivery
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <p className="mt-3 rounded-lg bg-destructive/10 p-3 text-xs font-semibold text-destructive">
+                {error}
+              </p>
+            )}
+
+            <div className="mt-8 flex justify-between">
+              <Button variant="ghost" onClick={() => setStep(1)}>
+                Back
+              </Button>
+              <Button
+                onClick={handleFinish}
+                disabled={submitting}
+                className="h-11 px-6 shadow-lg shadow-primary/20"
+                testId="button-launch-engine"
+              >
+                {submitting ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <>
+                    <Sparkles size={16} /> Launch My Engine
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -3094,13 +3474,10 @@ function AppContent() {
   const { user, isLoading } = useAuth();
   const openLogin = () => setLoginOpen(true);
 
-  // Auth state is still loading (first paint) — avoid flashing the landing
-  // page before we know whether there's an active session.
+  // Auth state is still loading (first paint)
   if (isLoading) return <FullScreenLoader />;
 
-  // Signed out: always show public marketing pages, regardless of which
-  // (possibly protected) path was requested — there is nothing to protect
-  // if there's no session yet.
+  // Signed out: show marketing/public pages
   if (!user) {
     const publicPage =
       location === "/" ||
@@ -3133,11 +3510,17 @@ function AppContent() {
     );
   }
 
-  // Signed in but hasn't finished (or skipped) onboarding yet.
-  if (!user.onboarded) {
-    return <OnboardingModal onDone={() => setLocation("/dashboard")} />;
+  // Guard 1: Signed in but email is unverified
+  if (!user.is_verified) {
+    return <VerifyEmailScreen />;
   }
 
+  // Guard 2: Verified but hasn't completed data-driven onboarding wizard
+  if (!user.onboarding_completed) {
+    return <OnboardingWizard onDone={() => setLocation("/dashboard")} />;
+  }
+
+  // Verified & onboarded: access full application
   return (
     <AppShell>
       <AppRouter />

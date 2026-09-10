@@ -185,26 +185,41 @@ def get_profile(
     skills = db.query(Skill).filter(Skill.user_id == current_user.id).all()
     skill_names = [s.core_skill for s in skills]
 
-    completion = 30
+    completion = 20
+    if current_user.is_verified:
+        completion += 20
     if current_user.full_name:
-        completion += 20
+        completion += 15
+    if current_user.github_username or current_user.linkedin_url:
+        completion += 15
     if skill_names:
-        completion += 30
-    if current_user.education or current_user.experience:
         completion += 20
+    if current_user.education or current_user.experience:
+        completion += 10
+
+    is_onboarded = bool(
+        current_user.onboarding_completed
+        or current_user.career_mode
+        or len(skills) > 0
+    )
 
     return ProfileResponse(
-        name=current_user.full_name or current_user.name or "User",
+        name=current_user.full_name or "User",
         email=current_user.email,
         experience=current_user.experience or "Intermediate",
         goals=["Build an income kit", "Monetize skills"],
-        availability=f"{current_user.available_time_hrs or 10} hours / week",
-        platforms=["Upwork", "Fiverr", "LinkedIn"],
+        availability=f"{current_user.target_weekly_hours or current_user.available_time_hrs or 10} hours / week",
+        platforms=["Upwork", "Fiverr", "LinkedIn", "GitHub"],
         incomeGoal=f"${current_user.income_goal or 3000:,.0f} / month",
         workType=current_user.career_mode or "Freelance projects",
         skills=skill_names,
         completion=min(100, completion),
-        onboarded=bool(current_user.career_mode or len(skills) > 0),
+        onboarded=is_onboarded,
+        isVerified=bool(current_user.is_verified),
+        githubUsername=current_user.github_username,
+        linkedinUrl=current_user.linkedin_url,
+        targetWeeklyHours=current_user.target_weekly_hours or 10,
+        onboardingCompleted=bool(current_user.onboarding_completed),
     )
 
 
@@ -214,25 +229,55 @@ def update_profile(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Any:
-    if payload.name:
+    if payload.name is not None:
         current_user.full_name = payload.name
-    if payload.experience:
+    if payload.experience is not None:
         current_user.experience = payload.experience
-    if payload.availability:
-        # Extract digits if any
+    if payload.githubUsername is not None:
+        current_user.github_username = payload.githubUsername.strip()
+    if payload.linkedinUrl is not None:
+        current_user.linkedin_url = payload.linkedinUrl.strip()
+    if payload.targetWeeklyHours is not None:
+        current_user.target_weekly_hours = payload.targetWeeklyHours
+        current_user.available_time_hrs = payload.targetWeeklyHours
+    if payload.onboardingCompleted is not None:
+        current_user.onboarding_completed = payload.onboardingCompleted
+
+    if payload.availability is not None:
         digits = [int(s) for s in payload.availability.split() if s.isdigit()]
         if digits:
             current_user.available_time_hrs = digits[0]
-    if payload.workType:
+            current_user.target_weekly_hours = digits[0]
+    if payload.workType is not None:
         current_user.career_mode = payload.workType
-    if payload.incomeGoal:
+    if payload.incomeGoal is not None:
         clean_val = payload.incomeGoal.replace("$", "").replace(",", "").split("/")[0].strip()
         try:
             current_user.income_goal = float(clean_val)
         except ValueError:
             pass
 
+    # Dynamic skill recalibration if skills are updated in settings
+    if payload.skills is not None:
+        clean_skills = [s.strip() for s in payload.skills if s.strip()]
+        db.query(Skill).filter(Skill.user_id == current_user.id).delete()
+        if clean_skills:
+            decomposed = ai_engine_service.decompose_input_skills(clean_skills)
+            for skill_name in clean_skills:
+                nodes = [d.model_dump() for d in decomposed if d.skill.lower() == skill_name.lower()]
+                if not nodes:
+                    nodes = [d.model_dump() for d in decomposed]
+                tags = list({d.get("category", "General") for d in nodes} | {skill_name})
+                db_skill = Skill(
+                    user_id=current_user.id,
+                    core_skill=skill_name,
+                    detected_tags=tags,
+                    decomposed_nodes=nodes,
+                )
+                db.add(db_skill)
+
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
     return get_profile(db=db, current_user=current_user)
+

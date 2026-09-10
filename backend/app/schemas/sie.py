@@ -166,6 +166,11 @@ class ProfileResponse(BaseModel):
     skills: List[str]
     completion: int
     onboarded: bool = False
+    isVerified: bool = False
+    githubUsername: Optional[str] = None
+    linkedinUrl: Optional[str] = None
+    targetWeeklyHours: Optional[int] = 10
+    onboardingCompleted: bool = False
 
 class UpdateProfileBody(BaseModel):
     name: Optional[str] = None
@@ -178,6 +183,12 @@ class UpdateProfileBody(BaseModel):
     skills: Optional[List[str]] = None
     completion: Optional[int] = None
     onboarded: Optional[bool] = None
+    isVerified: Optional[bool] = None
+    githubUsername: Optional[str] = None
+    linkedinUrl: Optional[str] = None
+    targetWeeklyHours: Optional[int] = None
+    onboardingCompleted: Optional[bool] = None
+
 
 
 class ProjectResponse(BaseModel):

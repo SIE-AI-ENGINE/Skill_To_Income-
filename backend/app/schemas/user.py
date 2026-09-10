@@ -1,11 +1,16 @@
 from pydantic import BaseModel, EmailStr, model_validator
-from typing import Optional, Union, Any
+from typing import Optional, Union, Any, List
 from datetime import datetime
 
 class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
     name: Optional[str] = None
+    is_verified: bool = False
+    github_username: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    target_weekly_hours: Optional[int] = 10
+    onboarding_completed: bool = False
     education: Optional[str] = None
     experience: Optional[str] = None
     income_goal: Optional[float] = None
@@ -28,6 +33,11 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     name: Optional[str] = None
+    github_username: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    target_weekly_hours: Optional[int] = None
+    onboarding_completed: Optional[bool] = None
+    is_verified: Optional[bool] = None
     education: Optional[str] = None
     experience: Optional[str] = None
     income_goal: Optional[float] = None
@@ -46,12 +56,22 @@ class UserResponse(UserBase):
             d = dict(data.__dict__)
             d["name"] = getattr(data, "full_name", None) or getattr(data, "name", None) or "User"
             d["full_name"] = getattr(data, "full_name", None) or d["name"]
-            d["onboarded"] = bool(getattr(data, "career_mode", None) or (hasattr(data, "skills") and len(data.skills) > 0))
+            is_done = getattr(data, "onboarding_completed", False) or bool(
+                getattr(data, "career_mode", None) or (hasattr(data, "skills") and len(data.skills) > 0)
+            )
+            d["onboarding_completed"] = bool(is_done)
+            d["onboarded"] = bool(is_done)
+            d["is_verified"] = getattr(data, "is_verified", False)
+            d["github_username"] = getattr(data, "github_username", None)
+            d["linkedin_url"] = getattr(data, "linkedin_url", None)
+            d["target_weekly_hours"] = getattr(data, "target_weekly_hours", 10)
             return d
         elif isinstance(data, dict):
             data["name"] = data.get("full_name") or data.get("name") or "User"
             data["full_name"] = data.get("full_name") or data.get("name")
-            data["onboarded"] = data.get("onboarded", False)
+            is_done = data.get("onboarding_completed", False) or data.get("onboarded", False)
+            data["onboarding_completed"] = bool(is_done)
+            data["onboarded"] = bool(is_done)
             return data
         return data
 
@@ -68,6 +88,22 @@ class AuthResponse(Token):
     name: Optional[str] = None
     email: Optional[str] = None
     onboarded: Optional[bool] = False
+    is_verified: bool = False
+    onboarding_completed: bool = False
 
 class TokenData(BaseModel):
-    email: Optional[str] = None
+    email: Optional[str] = None
+
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+class ResendOtpRequest(BaseModel):
+    email: EmailStr
+
+class OnboardingCompleteRequest(BaseModel):
+    github_username: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    target_weekly_hours: Optional[int] = 10
+    skills: List[str] = []
+
