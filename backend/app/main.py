@@ -17,6 +17,13 @@ async def lifespan(app: FastAPI):
     # Initialize database tables on startup safely
     try:
         Base.metadata.create_all(bind=engine)
+        # Ensure github_token column exists in users table (runtime SQLite/PostgreSQL safety)
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN github_token VARCHAR"))
+                conn.commit()
+        except Exception:
+            pass
     except Exception as exc:
         # In production environments with Neon/PostgreSQL, migrations run via Alembic
         print(f"[SIE-Startup] Table initialization notice: {exc}")
@@ -52,6 +59,18 @@ app.middleware("http")(catch_exceptions_middleware)
 
 # Include V1 API Router
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Direct alias for frontend market intelligence client route (/api/market)
+from app.schemas.sie import MarketIntelligenceResponse
+from app.api.v1.endpoints.market import get_market_trends
+from app.api.deps import get_db
+from sqlalchemy.orm import Session
+from fastapi import Depends
+
+@app.get("/api/market", response_model=MarketIntelligenceResponse, tags=["Market"])
+@app.get("/api/market/", response_model=MarketIntelligenceResponse, tags=["Market"])
+def direct_market_intelligence(db: Session = Depends(get_db)):
+    return get_market_trends(db=db)
 
 
 @app.get("/")

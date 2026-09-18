@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime
+from sqlalchemy.orm import synonym
 from sqlalchemy.sql import func
 from app.db.base import Base
 
@@ -10,9 +11,12 @@ class MarketData(Base):
     category = Column(String, index=True, nullable=False)
     opportunity_title = Column(String, nullable=False)
     
+    # Alias for category queries like MarketData.skill_category
+    skill_category = synonym("category")
+
     estimated_income = Column(Float, nullable=False)
     success_probability = Column(Float, nullable=False)
     demand_score = Column(Float, nullable=False)
     competition_score = Column(Float, nullable=False)
     
-    scraped_at = Column(DateTime(timezone=True), server_default=func.now())
+    scraped_at = Column(DateTime(timezone=True), server_default=func.now())

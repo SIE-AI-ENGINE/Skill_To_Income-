@@ -8,8 +8,12 @@
 import type { KitAsset } from './kitAsset';
 
 export interface IncomeKit {
+  id?: string;
   opportunityId: string;
-  opportunityTitle: string;
-  generatedAt: string;
+  opportunityTitle?: string;
+  title?: string;
+  service?: string;
+  generatedAt?: string;
+  createdAt?: string;
   assets: KitAsset[];
 }

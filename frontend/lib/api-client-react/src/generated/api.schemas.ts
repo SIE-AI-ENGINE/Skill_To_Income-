@@ -22,6 +22,7 @@ export interface Opportunity {
   whyNow: string;
   description: string;
   tags: string[];
+  semanticFit?: number;
 }
 
 export interface Activity {
@@ -63,6 +64,7 @@ export interface SkillDecomposition {
   trend: string;
   beginnerFriendly: boolean;
   description: string;
+  semanticFit?: number;
 }
 
 export interface SourceBreakdown {
@@ -76,6 +78,8 @@ export interface CategoryBreakdown {
   demand: number;
   competition: number;
   score: number;
+  average_rate?: string;
+  averageRate?: string;
 }
 
 export interface MarketIntelligence {
@@ -89,7 +93,9 @@ export interface MarketIntelligence {
 }
 
 export interface IncomeKitInput {
-  opportunityId: string;
+  opportunityId?: string;
+  service?: string;
+  opportunityTitle?: string;
 }
 
 export interface KitAsset {
@@ -102,9 +108,13 @@ export interface KitAsset {
 }
 
 export interface IncomeKit {
+  id?: string;
   opportunityId: string;
-  opportunityTitle: string;
-  generatedAt: string;
+  opportunityTitle?: string;
+  title?: string;
+  service?: string;
+  generatedAt?: string;
+  createdAt?: string;
   assets: KitAsset[];
 }
 
@@ -117,11 +127,15 @@ export interface Asset {
   views: number;
   clicks: number;
   responses: number;
+  content?: string;
+  opportunityId?: string;
+  opportunityTitle?: string;
 }
 
 export interface AssetUpdate {
   status?: string;
   name?: string;
+  content?: string;
 }
 
 export interface Experiment {

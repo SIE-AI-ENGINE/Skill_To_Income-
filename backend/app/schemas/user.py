@@ -8,6 +8,7 @@ class UserBase(BaseModel):
     name: Optional[str] = None
     is_verified: bool = False
     github_username: Optional[str] = None
+    github_token: Optional[str] = None
     linkedin_url: Optional[str] = None
     target_weekly_hours: Optional[int] = 10
     onboarding_completed: bool = False
@@ -34,6 +35,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     name: Optional[str] = None
     github_username: Optional[str] = None
+    github_token: Optional[str] = None
     linkedin_url: Optional[str] = None
     target_weekly_hours: Optional[int] = None
     onboarding_completed: Optional[bool] = None
@@ -48,6 +50,8 @@ class UserResponse(UserBase):
     id: int
     created_at: Optional[datetime] = None
     onboarded: bool = False
+    skills: Optional[List[str]] = None
+    primary_skill: Optional[str] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -63,8 +67,13 @@ class UserResponse(UserBase):
             d["onboarded"] = bool(is_done)
             d["is_verified"] = getattr(data, "is_verified", False)
             d["github_username"] = getattr(data, "github_username", None)
+            d["github_token"] = getattr(data, "github_token", None)
             d["linkedin_url"] = getattr(data, "linkedin_url", None)
             d["target_weekly_hours"] = getattr(data, "target_weekly_hours", 10)
+            if hasattr(data, "skills") and data.skills:
+                skill_names = [s.core_skill for s in data.skills if hasattr(s, "core_skill")]
+                d["skills"] = skill_names
+                d["primary_skill"] = skill_names[0] if skill_names else None
             return d
         elif isinstance(data, dict):
             data["name"] = data.get("full_name") or data.get("name") or "User"
@@ -72,6 +81,11 @@ class UserResponse(UserBase):
             is_done = data.get("onboarding_completed", False) or data.get("onboarded", False)
             data["onboarding_completed"] = bool(is_done)
             data["onboarded"] = bool(is_done)
+            data["github_token"] = data.get("github_token")
+            if "skills" in data and isinstance(data["skills"], list):
+                skill_names = [s if isinstance(s, str) else getattr(s, "core_skill", str(s)) for s in data["skills"]]
+                data["skills"] = skill_names
+                data["primary_skill"] = skill_names[0] if skill_names else None
             return data
         return data
 
@@ -103,6 +117,7 @@ class ResendOtpRequest(BaseModel):
 
 class OnboardingCompleteRequest(BaseModel):
     github_username: Optional[str] = None
+    github_token: Optional[str] = None
     linkedin_url: Optional[str] = None
     target_weekly_hours: Optional[int] = 10
     skills: List[str] = []

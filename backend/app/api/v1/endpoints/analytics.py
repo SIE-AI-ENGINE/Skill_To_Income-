@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user
@@ -71,6 +71,8 @@ def get_adaptive_analytics(
         total_views=total_views,
         total_clicks=total_clicks,
         total_conversions=total_conversions,
+        user_id=current_user.id,
+        db=db,
     )
 
 
@@ -81,3 +83,52 @@ def get_raw_analytics(
 ) -> Any:
     """Retrieve raw historical metrics recorded in the analytics table."""
     return db.query(Analytics).filter(Analytics.user_id == current_user.id).all()
+
+
+@router.get("/track/{tracking_id}")
+def track_redirect(
+    tracking_id: str,
+    dest: Optional[str] = None,
+    db: Session = Depends(get_db),
+) -> Any:
+    """
+    Automated link telemetry redirect:
+    Logs client clicks before redirecting to the target destination.
+    In accordance with Section 10.6 and Section 10.9 (Innovation #10).
+    """
+    from fastapi.responses import RedirectResponse
+
+    target_user_id = None
+    if "-" in tracking_id:
+        prefix = tracking_id.split("-")[0]
+        if prefix.isdigit():
+            target_user_id = int(prefix)
+    elif tracking_id.isdigit():
+        target_user_id = int(tracking_id)
+
+    if target_user_id:
+        user_exists = db.query(User).filter(User.id == target_user_id).first()
+        if user_exists:
+            metric_key = f"click:{tracking_id}"
+            rec = db.query(Analytics).filter(
+                Analytics.user_id == target_user_id,
+                Analytics.metric_name == metric_key,
+            ).first()
+            if rec:
+                rec.value += 1
+            else:
+                db.add(Analytics(user_id=target_user_id, metric_name=metric_key, value=1))
+
+            agg = db.query(Analytics).filter(
+                Analytics.user_id == target_user_id,
+                Analytics.metric_name == "clicks",
+            ).first()
+            if agg:
+                agg.value += 1
+            else:
+                db.add(Analytics(user_id=target_user_id, metric_name="clicks", value=1))
+
+            db.commit()
+
+    target_url = dest or "http://localhost:5173"
+    return RedirectResponse(url=target_url, status_code=302)

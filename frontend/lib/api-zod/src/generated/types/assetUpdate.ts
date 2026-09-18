@@ -9,4 +9,5 @@
 export interface AssetUpdate {
   status?: string;
   name?: string;
+  content?: string;
 }

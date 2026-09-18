@@ -75,6 +75,7 @@ def test_onboarding_guard_and_completion(client, db_session):
 
     onboard_payload = {
         "github_username": "kylereese",
+        "github_token": "ghp_kyle_pat_token_123",
         "linkedin_url": "https://linkedin.com/in/kylereese",
         "target_weekly_hours": 15,
         "skills": ["Python", "FastAPI"],
@@ -97,8 +98,12 @@ def test_onboarding_guard_and_completion(client, db_session):
     res_data = success.json()
     assert res_data["onboarding_completed"] is True
     assert res_data["github_username"] == "kylereese"
+    assert res_data["github_token"] == "ghp_kyle_pat_token_123"
     assert res_data["linkedin_url"] == "https://linkedin.com/in/kylereese"
     assert res_data["target_weekly_hours"] == 15
+
+    db_session.refresh(user)
+    assert user.github_token == "ghp_kyle_pat_token_123"
 
     # Check skills in DB
     skills = db_session.query(Skill).filter(Skill.user_id == user.id).all()

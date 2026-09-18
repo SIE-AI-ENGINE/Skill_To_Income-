@@ -7,5 +7,7 @@
  */
 
 export interface IncomeKitInput {
-  opportunityId: string;
+  opportunityId?: string;
+  service?: string;
+  opportunityTitle?: string;
 }

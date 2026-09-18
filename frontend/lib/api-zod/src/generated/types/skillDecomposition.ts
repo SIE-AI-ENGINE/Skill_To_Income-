@@ -17,4 +17,5 @@ export interface SkillDecomposition {
   trend: string;
   beginnerFriendly: boolean;
   description: string;
+  semanticFit?: number;
 }

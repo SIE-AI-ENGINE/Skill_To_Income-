@@ -114,6 +114,12 @@ def test_e2e_user_lifecycle_and_sie_pipeline(client, db_session):
     market_data = market_res.json()
     assert len(market_data) >= 1
 
+    # Verify non-slash /api/v1/market returns MarketIntelligenceResponse
+    market_intel_res = client.get("/api/v1/market")
+    assert market_intel_res.status_code == 200
+    assert market_intel_res.json()["marketScore"] > 0
+    assert len(market_intel_res.json()["weeklyTrend"]) > 0
+
     trends_res = client.get("/api/v1/market/trends")
     assert trends_res.status_code == 200
     assert trends_res.json()["marketScore"] > 0
@@ -190,6 +196,18 @@ def test_e2e_user_lifecycle_and_sie_pipeline(client, db_session):
     updated_asset = patch_res.json()
     assert updated_asset["status"] == "Live"
     assert updated_asset["name"] == "Published Service Blueprint"
+
+    # Delete asset via DELETE
+    del_res = client.delete(
+        f"/api/v1/assets/{first_asset['id']}",
+        headers=auth_headers,
+    )
+    assert del_res.status_code == 200, del_res.text
+    assert del_res.json()["status"] == "deleted"
+
+    # Verify asset is deleted from assets list
+    assets_after_del = client.get("/api/v1/assets", headers=auth_headers).json()
+    assert all(a["id"] != first_asset["id"] for a in assets_after_del)
 
     # Fetch closed-loop adaptive analytics matching frontend schema
     analytics_res = client.get("/api/v1/analytics", headers=auth_headers)

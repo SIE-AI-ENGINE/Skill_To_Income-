@@ -28,6 +28,8 @@ def complete_onboarding(
     # 1. Update user footprint and onboarding state
     if payload.github_username:
         current_user.github_username = payload.github_username.strip()
+    if payload.github_token:
+        current_user.github_token = payload.github_token.strip()
     if payload.linkedin_url:
         current_user.linkedin_url = payload.linkedin_url.strip()
     if payload.target_weekly_hours:

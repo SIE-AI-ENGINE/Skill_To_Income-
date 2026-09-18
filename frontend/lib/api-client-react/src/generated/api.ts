@@ -901,6 +901,88 @@ export const useUpdateAsset = <TError = ErrorType<void>,
       return useMutation(getUpdateAssetMutationOptions(options));
     }
 
+export const getDeleteAssetUrl = (id: string) => {
+  return `/api/assets/${id}`;
+};
+
+/**
+ * @summary Delete an asset
+ */
+export const deleteAsset = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<{ status: string; id: string }> => {
+  return customFetch<{ status: string; id: string }>(getDeleteAssetUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteAssetMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAsset>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAsset>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteAsset"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAsset>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+    return deleteAsset(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAssetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAsset>>
+>;
+export type DeleteAssetMutationError = ErrorType<void>;
+
+/**
+ * @summary Delete an asset
+ */
+export const useDeleteAsset = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAsset>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAsset>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteAssetMutationOptions(options));
+};
+
 export const getGetAnalyticsUrl = () => {
 
 

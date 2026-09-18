@@ -59,7 +59,7 @@ def get_dashboard(
     current_user: User = Depends(get_current_user),
 ) -> Any:
     decomposed = _get_user_decomposed_skills(current_user.id, db)
-    opportunities = ai_engine_service.compute_ranked_opportunities(decomposed) if decomposed else []
+    opportunities = ai_engine_service.compute_ranked_opportunities(decomposed, db=db, user=current_user) if decomposed else []
 
     kits_count = db.query(IncomeKit).filter(IncomeKit.user_id == current_user.id).count()
     skills_count = db.query(Skill).filter(Skill.user_id == current_user.id).count()
@@ -69,13 +69,17 @@ def get_dashboard(
     if current_user.full_name:
         completion += 15
     if current_user.education:
-        completion += 15
+        completion += 10
     if current_user.experience:
-        completion += 15
+        completion += 10
     if current_user.income_goal:
-        completion += 15
+        completion += 10
+    if current_user.github_username:
+        completion += 10
+    if current_user.linkedin_url:
+        completion += 10
     if skills_count > 0:
-        completion += 20
+        completion += 15
     completion = min(100, completion)
 
     # Top opportunity
@@ -160,7 +164,7 @@ def get_opportunities(
     decomposed = _get_user_decomposed_skills(current_user.id, db)
     if not decomposed:
         return []
-    return ai_engine_service.compute_ranked_opportunities(decomposed)
+    return ai_engine_service.compute_ranked_opportunities(decomposed, db=db, user=current_user)
 
 
 @router.get("/opportunities/{opp_id}", response_model=Opportunity)
@@ -170,7 +174,7 @@ def get_opportunity(
     current_user: User = Depends(get_current_user),
 ) -> Any:
     decomposed = _get_user_decomposed_skills(current_user.id, db)
-    opportunities = ai_engine_service.compute_ranked_opportunities(decomposed) if decomposed else []
+    opportunities = ai_engine_service.compute_ranked_opportunities(decomposed, db=db, user=current_user) if decomposed else []
     for opp in opportunities:
         if opp.id == opp_id:
             return opp

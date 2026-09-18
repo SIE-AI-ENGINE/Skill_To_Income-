@@ -19,4 +19,5 @@ export interface Opportunity {
   whyNow: string;
   description: string;
   tags: string[];
+  semanticFit?: number;
 }

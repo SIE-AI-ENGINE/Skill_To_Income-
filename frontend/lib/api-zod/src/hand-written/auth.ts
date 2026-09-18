@@ -29,6 +29,7 @@ export const AuthUser = zod.object({
   is_verified: zod.boolean().optional(),
   onboarding_completed: zod.boolean().optional(),
   github_username: zod.string().nullable().optional(),
+  github_token: zod.string().nullable().optional(),
   linkedin_url: zod.string().nullable().optional(),
   target_weekly_hours: zod.number().nullable().optional(),
 });
@@ -47,6 +48,7 @@ export type ResendOtpBodyType = zod.infer<typeof ResendOtpBody>;
 
 export const OnboardingCompleteBody = zod.object({
   github_username: zod.string().optional(),
+  github_token: zod.string().optional(),
   linkedin_url: zod.string().optional(),
   target_weekly_hours: zod.number().optional(),
   skills: zod.array(zod.string()),

@@ -171,9 +171,13 @@ export const GetOpportunityResponse = zod.object({
  * @summary Get current income kit
  */
 export const GetIncomeKitResponse = zod.object({
+  "id": zod.string().optional(),
   "opportunityId": zod.string(),
-  "opportunityTitle": zod.string(),
-  "generatedAt": zod.string(),
+  "opportunityTitle": zod.string().optional(),
+  "title": zod.string().optional(),
+  "service": zod.string().optional(),
+  "generatedAt": zod.string().optional(),
+  "createdAt": zod.string().optional(),
   "assets": zod.array(zod.object({
   "id": zod.string(),
   "type": zod.string(),
@@ -189,13 +193,19 @@ export const GetIncomeKitResponse = zod.object({
  * @summary Generate an income kit
  */
 export const GenerateIncomeKitBody = zod.object({
-  "opportunityId": zod.string()
+  "opportunityId": zod.string().optional(),
+  "service": zod.string().optional(),
+  "opportunityTitle": zod.string().optional()
 })
 
 export const GenerateIncomeKitResponse = zod.object({
+  "id": zod.string().optional(),
   "opportunityId": zod.string(),
-  "opportunityTitle": zod.string(),
-  "generatedAt": zod.string(),
+  "opportunityTitle": zod.string().optional(),
+  "title": zod.string().optional(),
+  "service": zod.string().optional(),
+  "generatedAt": zod.string().optional(),
+  "createdAt": zod.string().optional(),
   "assets": zod.array(zod.object({
   "id": zod.string(),
   "type": zod.string(),

@@ -134,6 +134,7 @@ export const login = async (
     is_verified: Boolean(user.is_verified),
     onboarding_completed: Boolean(user.onboarding_completed),
     github_username: user.github_username ?? null,
+    github_token: user.github_token ?? null,
     linkedin_url: user.linkedin_url ?? null,
     target_weekly_hours: user.target_weekly_hours ?? 10,
   };
@@ -236,6 +237,7 @@ export const completeOnboarding = async (
     is_verified: true,
     onboarding_completed: true,
     github_username: user.github_username ?? null,
+    github_token: user.github_token ?? null,
     linkedin_url: user.linkedin_url ?? null,
     target_weekly_hours: user.target_weekly_hours ?? 10,
   };

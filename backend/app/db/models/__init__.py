@@ -7,6 +7,7 @@ from app.db.models.analytics import Analytics
 from app.db.models.history import History
 from app.db.models.feedback import Feedback
 from app.db.models.deployment import Deployment
+from app.db.models.outcome import UserOutcome
 
 # For Alembic to discover models automatically
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "History",
     "Feedback",
     "Deployment",
+    "UserOutcome",
 ]

@@ -20,6 +20,7 @@ type AuthContextValue = {
   resendOtp: (email: string) => Promise<{ message: string }>;
   completeOnboarding: (data: {
     github_username?: string;
+    github_token?: string;
     linkedin_url?: string;
     target_weekly_hours?: number;
     skills: string[];

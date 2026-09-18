@@ -18,6 +18,7 @@ class User(Base):
     
     # Onboarding & Professional Footprint attributes
     github_username = Column(String, nullable=True)
+    github_token = Column(String, nullable=True)
     linkedin_url = Column(String, nullable=True)
     target_weekly_hours = Column(Integer, default=10, nullable=True)
     onboarding_completed = Column(Boolean, default=False, nullable=False)
@@ -35,3 +36,4 @@ class User(Base):
     history = relationship("History", back_populates="user", cascade="all, delete-orphan")
     analytics = relationship("Analytics", back_populates="user", cascade="all, delete-orphan")
     feedbacks = relationship("Feedback", back_populates="user", cascade="all, delete-orphan")
+    outcomes = relationship("UserOutcome", back_populates="user", cascade="all, delete-orphan")

@@ -28,6 +28,7 @@ def create_market_data(
     db.refresh(record)
     return record
 
+@router.get("", response_model=MarketIntelligenceResponse)
 @router.get("/trends", response_model=MarketIntelligenceResponse)
 @router.get("/intelligence", response_model=MarketIntelligenceResponse)
 def get_market_trends(db: Session = Depends(get_db)) -> Any:
@@ -60,15 +61,29 @@ def get_market_trends(db: Session = Depends(get_db)) -> Any:
                 cat_map[m.category] = []
             cat_map[m.category].append(m)
             
-        categories = [
-            MarketCategory(
-                name=cat,
-                demand=int(sum(x.demand_score for x in items) / len(items) * 10),
-                competition=int(sum(x.competition_score for x in items) / len(items) * 10),
-                score=int(sum(x.success_probability for x in items) / len(items) * 100),
+        categories = []
+        for cat, items in cat_map.items():
+            inr_rates = []
+            for x in items:
+                inc = float(getattr(x, "estimated_income", 0.0) or 0.0)
+                if inc > 0:
+                    if inc < 1000.0:  # Scraped in USD
+                        inr_rates.append(inc * 85.0)
+                    else:
+                        inr_rates.append(inc)
+            avg_inr = sum(inr_rates) / len(inr_rates) if inr_rates else 4500.0
+            rounded_avg = int(round(avg_inr / 500.0) * 500)
+            avg_rate_str = f"₹{rounded_avg:,}/order" if rounded_avg < 6000 else f"₹{rounded_avg:,}/project"
+
+            categories.append(
+                MarketCategory(
+                    name=cat,
+                    demand=int(sum(x.demand_score for x in items) / len(items) * 10),
+                    competition=int(sum(x.competition_score for x in items) / len(items) * 10),
+                    score=int(sum(x.success_probability for x in items) / len(items) * 100),
+                    average_rate=avg_rate_str,
+                )
             )
-            for cat, items in cat_map.items()
-        ]
     else:
         avg_demand = 86
         avg_comp = 38
@@ -78,9 +93,9 @@ def get_market_trends(db: Session = Depends(get_db)) -> Any:
             MarketSource(name="LinkedIn", value=25, color="#8c6ce6"),
         ]
         categories = [
-            MarketCategory(name="Data & Automation", demand=92, competition=35, score=94),
-            MarketCategory(name="Backend APIs", demand=88, competition=32, score=90),
-            MarketCategory(name="Full-Stack Web", demand=85, competition=40, score=88),
+            MarketCategory(name="Data & Automation", demand=92, competition=35, score=94, average_rate="₹4,500/order"),
+            MarketCategory(name="Backend APIs", demand=88, competition=32, score=90, average_rate="₹6,000/project"),
+            MarketCategory(name="Full-Stack Web", demand=85, competition=40, score=88, average_rate="₹8,000/project"),
         ]
 
     return MarketIntelligenceResponse(
