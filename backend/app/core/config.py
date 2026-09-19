@@ -54,6 +54,14 @@ class Settings(BaseSettings):
     # Optional AI Engine Key
     GROQ_API_KEY: Optional[str] = None
 
+    # SMTP / Transactional Email
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    EMAILS_FROM_EMAIL: str = ""
+    EMAILS_FROM_NAME: str = "Skill-to-Income AI Engine"
+
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         if self.DATABASE_URL:

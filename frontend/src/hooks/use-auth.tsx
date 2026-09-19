@@ -19,9 +19,18 @@ type AuthContextValue = {
   verifyEmail: (email: string, otp: string) => Promise<AuthUserType>;
   resendOtp: (email: string) => Promise<{ message: string }>;
   completeOnboarding: (data: {
+    role?: string;
+    target_role?: string;
+    career_mode?: string;
+    experience_level?: string;
+    experience?: string;
+    income_goal?: string | number;
+    github_url?: string;
     github_username?: string;
     github_token?: string;
+    github_pat?: string;
     linkedin_url?: string;
+    proof_project?: string;
     target_weekly_hours?: number;
     skills: string[];
   }) => Promise<AuthUserType>;
@@ -69,6 +78,9 @@ export function useAuth(): AuthContextValue {
 }
 
 export function authErrorMessage(err: unknown, fallback: string): string {
-  const apiError = err as ErrorType<{ detail?: string; error?: string }> | undefined;
-  return apiError?.data?.detail ?? apiError?.data?.error ?? fallback;
+  const apiError = err as ErrorType<{ detail?: string | Array<{ msg?: string; message?: string }>; error?: string }> | undefined;
+  if (Array.isArray(apiError?.data?.detail)) {
+    return apiError.data.detail.map((d) => d.msg || d.message || JSON.stringify(d)).join("; ");
+  }
+  return (typeof apiError?.data?.detail === "string" ? apiError.data.detail : undefined) ?? apiError?.data?.error ?? fallback;
 }

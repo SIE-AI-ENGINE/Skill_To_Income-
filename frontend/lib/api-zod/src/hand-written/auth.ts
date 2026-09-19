@@ -29,9 +29,18 @@ export const AuthUser = zod.object({
   is_verified: zod.boolean().optional(),
   onboarding_completed: zod.boolean().optional(),
   github_username: zod.string().nullable().optional(),
+  github_url: zod.string().nullable().optional(),
   github_token: zod.string().nullable().optional(),
   linkedin_url: zod.string().nullable().optional(),
   target_weekly_hours: zod.number().nullable().optional(),
+  role: zod.string().nullable().optional(),
+  target_role: zod.string().nullable().optional(),
+  career_mode: zod.string().nullable().optional(),
+  experience_level: zod.string().nullable().optional(),
+  income_goal: zod.union([zod.string(), zod.number()]).nullable().optional(),
+  skills: zod.array(zod.string()).nullable().optional(),
+  proof_project: zod.string().nullable().optional(),
+  github_pat: zod.string().nullable().optional(),
 });
 export type AuthUserType = zod.infer<typeof AuthUser>;
 
@@ -47,9 +56,18 @@ export const ResendOtpBody = zod.object({
 export type ResendOtpBodyType = zod.infer<typeof ResendOtpBody>;
 
 export const OnboardingCompleteBody = zod.object({
+  role: zod.string().optional(),
+  target_role: zod.string().optional(),
+  career_mode: zod.string().optional(),
+  experience_level: zod.string().optional(),
+  experience: zod.string().optional(),
+  income_goal: zod.union([zod.string(), zod.number()]).optional(),
   github_username: zod.string().optional(),
+  github_url: zod.string().optional(),
   github_token: zod.string().optional(),
+  github_pat: zod.string().optional(),
   linkedin_url: zod.string().optional(),
+  proof_project: zod.string().optional(),
   target_weekly_hours: zod.number().optional(),
   skills: zod.array(zod.string()),
 });

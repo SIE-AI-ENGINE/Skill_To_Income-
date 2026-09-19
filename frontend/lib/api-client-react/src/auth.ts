@@ -47,13 +47,14 @@ export function useMe(
       try {
         const u = await getMe();
         if (!u) return null;
+        const localOnboarded = typeof window !== "undefined" && window.localStorage.getItem("onboarding_completed") === "true";
         return {
           ...u,
           id: String(u.id),
           name: u.name || (u as any).full_name || "User",
-          onboarded: Boolean(u.onboarded || u.onboarding_completed),
+          onboarded: Boolean(u.onboarded || u.onboarding_completed || localOnboarded),
           is_verified: Boolean(u.is_verified),
-          onboarding_completed: Boolean(u.onboarding_completed),
+          onboarding_completed: Boolean(u.onboarding_completed || localOnboarded),
         };
       } catch (err) {
         if ((err as ErrorType<unknown>)?.status === 401) return null;
@@ -83,6 +84,10 @@ export const signup = async (
     window.localStorage.setItem("sie_token", token);
   }
   const user = data?.user || data;
+  return formatAuthUser(user);
+};
+
+function formatAuthUser(user: any): AuthUserType {
   return {
     id: String(user.id),
     name: user.name || user.full_name || "User",
@@ -91,10 +96,20 @@ export const signup = async (
     is_verified: Boolean(user.is_verified),
     onboarding_completed: Boolean(user.onboarding_completed),
     github_username: user.github_username ?? null,
+    github_url: user.github_url ?? null,
+    github_token: user.github_token ?? null,
     linkedin_url: user.linkedin_url ?? null,
     target_weekly_hours: user.target_weekly_hours ?? 10,
+    role: user.role ?? null,
+    target_role: user.target_role ?? user.career_mode ?? null,
+    career_mode: user.career_mode ?? null,
+    experience_level: user.experience_level ?? null,
+    income_goal: user.income_goal ?? null,
+    skills: user.skills ?? null,
+    proof_project: user.proof_project ?? null,
+    github_pat: user.github_pat ?? user.github_token ?? null,
   };
-};
+}
 
 export function useSignup<TError = ErrorType<unknown>, TContext = unknown>(
   options?: { mutation?: UseMutationOptions<AuthUserType, TError, SignupBodyType, TContext> },
@@ -126,18 +141,7 @@ export const login = async (
     window.localStorage.setItem("sie_token", token);
   }
   const user = data?.user || data;
-  return {
-    id: String(user.id),
-    name: user.name || user.full_name || "User",
-    email: user.email,
-    onboarded: Boolean(user.onboarded || user.onboarding_completed),
-    is_verified: Boolean(user.is_verified),
-    onboarding_completed: Boolean(user.onboarding_completed),
-    github_username: user.github_username ?? null,
-    github_token: user.github_token ?? null,
-    linkedin_url: user.linkedin_url ?? null,
-    target_weekly_hours: user.target_weekly_hours ?? 10,
-  };
+  return formatAuthUser(user);
 };
 
 export function useLogin<TError = ErrorType<unknown>, TContext = unknown>(
@@ -170,17 +174,7 @@ export const verifyEmail = async (
     window.localStorage.setItem("sie_token", token);
   }
   const user = data?.user || data;
-  return {
-    id: String(user.id),
-    name: user.name || user.full_name || "User",
-    email: user.email,
-    onboarded: Boolean(user.onboarded || user.onboarding_completed),
-    is_verified: Boolean(user.is_verified),
-    onboarding_completed: Boolean(user.onboarding_completed),
-    github_username: user.github_username ?? null,
-    linkedin_url: user.linkedin_url ?? null,
-    target_weekly_hours: user.target_weekly_hours ?? 10,
-  };
+  return formatAuthUser(user);
 };
 
 export function useVerifyEmail<TError = ErrorType<unknown>, TContext = unknown>(
@@ -228,19 +222,11 @@ export const completeOnboarding = async (
     headers: { "Content-Type": "application/json", ...options?.headers },
     body: JSON.stringify(body),
   });
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem("onboarding_completed", "true");
+  }
   const user = data?.user || data;
-  return {
-    id: String(user.id),
-    name: user.name || user.full_name || "User",
-    email: user.email,
-    onboarded: true,
-    is_verified: true,
-    onboarding_completed: true,
-    github_username: user.github_username ?? null,
-    github_token: user.github_token ?? null,
-    linkedin_url: user.linkedin_url ?? null,
-    target_weekly_hours: user.target_weekly_hours ?? 10,
-  };
+  return formatAuthUser(user);
 };
 
 export function useCompleteOnboarding<TError = ErrorType<unknown>, TContext = unknown>(

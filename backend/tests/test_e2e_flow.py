@@ -245,7 +245,7 @@ def test_schema_validation_error_handling(client):
 
 def test_duplicate_user_signup_returns_400(client):
     """Attempting duplicate email signup returns HTTP 400."""
-    payload = {"email": "duplicate@example.com", "password": "SecretPassword1"}
+    payload = {"email": "duplicate@example.com", "password": "SecretPassword1!"}
     r1 = client.post("/api/v1/auth/signup", json=payload)
     assert r1.status_code == 201
 

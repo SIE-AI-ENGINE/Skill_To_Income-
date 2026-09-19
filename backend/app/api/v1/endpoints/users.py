@@ -1,3 +1,4 @@
+import re
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -12,6 +13,8 @@ onboarding_router = APIRouter()
 
 @onboarding_router.post("/complete", response_model=UserResponse)
 @router.post("/onboarding/complete", response_model=UserResponse)
+@router.put("/profile", response_model=UserResponse)
+@router.put("/user/profile", response_model=UserResponse)
 def complete_onboarding(
     *,
     db: Session = Depends(get_db),
@@ -26,12 +29,33 @@ def complete_onboarding(
         )
 
     # 1. Update user footprint and onboarding state
-    if payload.github_username:
-        current_user.github_username = payload.github_username.strip()
-    if payload.github_token:
-        current_user.github_token = payload.github_token.strip()
+    if payload.full_name or payload.name:
+        current_user.full_name = (payload.full_name or payload.name).strip()
+    target_role = payload.target_role or payload.role or payload.career_mode
+    if target_role:
+        current_user.career_mode = target_role.strip()
+    exp_level = payload.experience_level or payload.experience
+    if exp_level:
+        current_user.experience = exp_level.strip()
+    if payload.income_goal is not None:
+        try:
+            if isinstance(payload.income_goal, str):
+                clean_income = re.sub(r"[^\d.]", "", payload.income_goal)
+                if clean_income:
+                    current_user.income_goal = float(clean_income)
+            else:
+                current_user.income_goal = float(payload.income_goal)
+        except Exception:
+            pass
+    if payload.github_url or payload.github_username:
+        current_user.github_username = (payload.github_url or payload.github_username).strip()
+    pat = payload.github_pat or payload.github_token
+    if pat:
+        current_user.github_token = pat.strip()
     if payload.linkedin_url:
         current_user.linkedin_url = payload.linkedin_url.strip()
+    if payload.proof_project:
+        current_user.proof_project = payload.proof_project.strip()
     if payload.target_weekly_hours:
         current_user.target_weekly_hours = payload.target_weekly_hours
         current_user.available_time_hrs = payload.target_weekly_hours

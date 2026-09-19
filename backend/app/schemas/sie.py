@@ -185,6 +185,7 @@ class ProfileResponse(BaseModel):
     linkedinUrl: Optional[str] = None
     targetWeeklyHours: Optional[int] = 10
     onboardingCompleted: bool = False
+    proofProject: Optional[str] = None
 
 class UpdateProfileBody(BaseModel):
     name: Optional[str] = None
@@ -202,6 +203,7 @@ class UpdateProfileBody(BaseModel):
     linkedinUrl: Optional[str] = None
     targetWeeklyHours: Optional[int] = None
     onboardingCompleted: Optional[bool] = None
+    proofProject: Optional[str] = None
 
 
 

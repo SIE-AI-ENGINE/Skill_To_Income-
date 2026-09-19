@@ -92,7 +92,7 @@ def get_dashboard(
             rank=1,
             title="Add skills to reveal top opportunities",
             platform="SIE Engine",
-            expectedEarnings="$0",
+            expectedEarnings="₹0",
             demand=0,
             competition=0,
             effort="N/A",
@@ -214,7 +214,7 @@ def get_profile(
         goals=["Build an income kit", "Monetize skills"],
         availability=f"{current_user.target_weekly_hours or current_user.available_time_hrs or 10} hours / week",
         platforms=["Upwork", "Fiverr", "LinkedIn", "GitHub"],
-        incomeGoal=f"${current_user.income_goal or 3000:,.0f} / month",
+        incomeGoal=f"₹{current_user.income_goal or 30000:,.0f} / month",
         workType=current_user.career_mode or "Freelance projects",
         skills=skill_names,
         completion=min(100, completion),
@@ -224,6 +224,7 @@ def get_profile(
         linkedinUrl=current_user.linkedin_url,
         targetWeeklyHours=current_user.target_weekly_hours or 10,
         onboardingCompleted=bool(current_user.onboarding_completed),
+        proofProject=current_user.proof_project,
     )
 
 
@@ -246,6 +247,8 @@ def update_profile(
         current_user.available_time_hrs = payload.targetWeeklyHours
     if payload.onboardingCompleted is not None:
         current_user.onboarding_completed = payload.onboardingCompleted
+    if payload.proofProject is not None:
+        current_user.proof_project = payload.proofProject.strip()
 
     if payload.availability is not None:
         digits = [int(s) for s in payload.availability.split() if s.isdigit()]
@@ -255,7 +258,7 @@ def update_profile(
     if payload.workType is not None:
         current_user.career_mode = payload.workType
     if payload.incomeGoal is not None:
-        clean_val = payload.incomeGoal.replace("$", "").replace(",", "").split("/")[0].strip()
+        clean_val = payload.incomeGoal.replace("₹", "").replace("$", "").replace(",", "").split("/")[0].strip()
         try:
             current_user.income_goal = float(clean_val)
         except ValueError:

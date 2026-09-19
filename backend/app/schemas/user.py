@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr, model_validator
+import re
+from pydantic import BaseModel, EmailStr, model_validator, field_validator
 from typing import Optional, Union, Any, List
 from datetime import datetime
 
@@ -17,6 +18,7 @@ class UserBase(BaseModel):
     income_goal: Optional[float] = None
     available_time_hrs: Optional[int] = None
     career_mode: Optional[str] = None
+    proof_project: Optional[str] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -31,6 +33,19 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+    @field_validator("password")
+    @classmethod
+    def validate_password_complexity(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter (A-Z)")
+        if not re.search(r"[0-9]", v):
+            raise ValueError("Password must contain at least one numeric digit (0-9)")
+        if not re.search(r"[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]", v):
+            raise ValueError("Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)")
+        return v
+
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     name: Optional[str] = None
@@ -42,9 +57,15 @@ class UserUpdate(BaseModel):
     is_verified: Optional[bool] = None
     education: Optional[str] = None
     experience: Optional[str] = None
-    income_goal: Optional[float] = None
+    experience_level: Optional[str] = None
+    income_goal: Optional[Union[float, str]] = None
     available_time_hrs: Optional[int] = None
     career_mode: Optional[str] = None
+    target_role: Optional[str] = None
+    proof_project: Optional[str] = None
+    github_url: Optional[str] = None
+    github_pat: Optional[str] = None
+    skills: Optional[List[str]] = None
 
 class UserResponse(UserBase):
     id: int
@@ -69,6 +90,7 @@ class UserResponse(UserBase):
             d["github_username"] = getattr(data, "github_username", None)
             d["github_token"] = getattr(data, "github_token", None)
             d["linkedin_url"] = getattr(data, "linkedin_url", None)
+            d["proof_project"] = getattr(data, "proof_project", None)
             d["target_weekly_hours"] = getattr(data, "target_weekly_hours", 10)
             if hasattr(data, "skills") and data.skills:
                 skill_names = [s.core_skill for s in data.skills if hasattr(s, "core_skill")]
@@ -82,6 +104,7 @@ class UserResponse(UserBase):
             data["onboarding_completed"] = bool(is_done)
             data["onboarded"] = bool(is_done)
             data["github_token"] = data.get("github_token")
+            data["proof_project"] = data.get("proof_project")
             if "skills" in data and isinstance(data["skills"], list):
                 skill_names = [s if isinstance(s, str) else getattr(s, "core_skill", str(s)) for s in data["skills"]]
                 data["skills"] = skill_names
@@ -116,9 +139,20 @@ class ResendOtpRequest(BaseModel):
     email: EmailStr
 
 class OnboardingCompleteRequest(BaseModel):
+    name: Optional[str] = None
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+    target_role: Optional[str] = None
+    career_mode: Optional[str] = None
+    experience_level: Optional[str] = None
+    experience: Optional[str] = None
+    income_goal: Optional[Union[float, str]] = None
     github_username: Optional[str] = None
+    github_url: Optional[str] = None
     github_token: Optional[str] = None
+    github_pat: Optional[str] = None
     linkedin_url: Optional[str] = None
+    proof_project: Optional[str] = None
     target_weekly_hours: Optional[int] = 10
     skills: List[str] = []
 

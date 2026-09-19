@@ -1,7 +1,7 @@
 import random
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.models.user import User
@@ -14,11 +14,18 @@ from app.schemas.user import (
 )
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.api.deps import get_db, get_current_user
+from app.services.email import send_otp_email
 
 router = APIRouter()
 
 @router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-def signup(*, db: Session = Depends(get_db), user_in: UserCreate, response: Response) -> Any:
+def signup(
+    *,
+    db: Session = Depends(get_db),
+    user_in: UserCreate,
+    response: Response,
+    background_tasks: BackgroundTasks,
+) -> Any:
     user = db.query(User).filter(User.email == user_in.email).first()
     if user:
         raise HTTPException(
@@ -43,6 +50,7 @@ def signup(*, db: Session = Depends(get_db), user_in: UserCreate, response: Resp
     db.refresh(user)
 
     print(f"[AUTH] Verification OTP for {user.email}: {otp}", flush=True)
+    background_tasks.add_task(send_otp_email, user.email, otp)
 
     access_token = create_access_token(subject=user.email)
     response.set_cookie(
@@ -140,6 +148,7 @@ def resend_otp(
     *,
     db: Session = Depends(get_db),
     payload: ResendOtpRequest,
+    background_tasks: BackgroundTasks,
 ) -> Any:
     user = db.query(User).filter(User.email == payload.email).first()
     if not user:
@@ -153,6 +162,7 @@ def resend_otp(
     db.add(user)
     db.commit()
     print(f"[AUTH] Verification OTP for {user.email}: {otp}", flush=True)
+    background_tasks.add_task(send_otp_email, user.email, otp)
     return {"message": "Verification code resent successfully"}
 
 @router.post("/login", response_model=AuthResponse)

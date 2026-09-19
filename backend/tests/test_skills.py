@@ -4,11 +4,11 @@ import pytest
 def auth_token(client):
     client.post(
         "/api/v1/auth/signup",
-        json={"email": "user@example.com", "password": "password"},
+        json={"email": "user@example.com", "password": "Password123!"},
     )
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": "user@example.com", "password": "password"},
+        data={"username": "user@example.com", "password": "Password123!"},
     )
     return response.json()["access_token"]
 

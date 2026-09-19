@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -17,10 +18,29 @@ async def lifespan(app: FastAPI):
     # Initialize database tables on startup safely
     try:
         Base.metadata.create_all(bind=engine)
-        # Ensure github_token column exists in users table (runtime SQLite/PostgreSQL safety)
+        # Ensure github_token and proof_project columns exist in users table (runtime SQLite/PostgreSQL safety)
         try:
             with engine.connect() as conn:
                 conn.execute(text("ALTER TABLE users ADD COLUMN github_token VARCHAR"))
+                conn.commit()
+        except Exception:
+            pass
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN proof_project VARCHAR"))
+                conn.commit()
+        except Exception:
+            pass
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("""
+                    CREATE OR REPLACE VIEW user_profiles AS 
+                    SELECT id, email, full_name, career_mode, experience, income_goal, 
+                           available_time_hrs, target_weekly_hours, github_username, 
+                           github_token, linkedin_url, onboarding_completed, is_verified, 
+                           proof_project, created_at 
+                    FROM users
+                """))
                 conn.commit()
         except Exception:
             pass
@@ -40,7 +60,7 @@ app = FastAPI(
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(_: Request, exc: RequestValidationError):
-    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+    return JSONResponse(status_code=422, content={"detail": jsonable_encoder(exc.errors())})
 
 
 @app.exception_handler(Exception)

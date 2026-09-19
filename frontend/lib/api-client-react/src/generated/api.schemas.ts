@@ -183,6 +183,10 @@ export interface ProfileUpdate {
   workType?: string;
   skills?: string[];
   onboarded?: boolean;
+  githubUsername?: string;
+  linkedinUrl?: string;
+  proofProject?: string;
+  targetWeeklyHours?: number;
 }
 
 export type GetSkillDecompositionParams = {

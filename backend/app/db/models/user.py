@@ -27,6 +27,7 @@ class User(Base):
     income_goal = Column(Float, nullable=True)  # e.g. 50000.0
     available_time_hrs = Column(Integer, nullable=True)  # e.g. 3
     career_mode = Column(String, nullable=True)  # e.g. Freelancing + Remote Jobs
+    proof_project = Column(String, nullable=True)  # e.g. Primary Proof of Work project
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
