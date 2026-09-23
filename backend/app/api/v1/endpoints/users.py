@@ -64,7 +64,17 @@ def complete_onboarding(
 
     # 2. Ingest and decompose skills atomically
     if payload.skills:
-        clean_skills = [s.strip() for s in payload.skills if s.strip()]
+        import re
+        def is_valid_skill(skill: str) -> bool:
+            if len(skill) < 2: return False
+            if not re.search(r'[aeiouyAEIOUY]', skill):
+                known_acronyms = {"HTML", "CSS", "SQL", "AWS", "GCP", "PHP", "CV", "ML", "AI", "UX", "UI", "PR", "HR"}
+                if skill.upper() not in known_acronyms: return False
+            if not re.search(r'[a-zA-Z]', skill): return False
+            if re.search(r'(.)\1{3,}', skill): return False
+            return True
+
+        clean_skills = [s.strip() for s in payload.skills if s.strip() and is_valid_skill(s.strip())]
         if clean_skills:
             decomposed = ai_engine_service.decompose_input_skills(clean_skills)
 

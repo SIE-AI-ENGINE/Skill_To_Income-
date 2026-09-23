@@ -682,11 +682,7 @@ export function useGetIncomeKit<TData = Awaited<ReturnType<typeof getIncomeKit>>
 
 
 export const getGenerateIncomeKitUrl = () => {
-
-
-
-
-  return `/api/income-kit`
+  return `/api/income-kit/generate`
 }
 
 /**
