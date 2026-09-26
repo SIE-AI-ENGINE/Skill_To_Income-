@@ -105,6 +105,15 @@ def get_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 10) -> 
     users = db.query(User).offset(skip).limit(limit).all()
     return users
 
+@router.get("/me", response_model=UserResponse)
+def get_user_me(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Any:
+    skills = db.query(Skill).filter(Skill.user_id == current_user.id).all()
+    current_user.skills = skills
+    return current_user
+
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user_by_id(user_id: int, db: Session = Depends(get_db)) -> Any:
     user = db.query(User).filter(User.id == user_id).first()

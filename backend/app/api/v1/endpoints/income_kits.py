@@ -129,6 +129,7 @@ def _generate_and_persist_kit(
     opp_id_param: Optional[str] = None,
     service_param: Optional[str] = None,
     title_param: Optional[str] = None,
+    skill_name: Optional[str] = None,
 ) -> SIEKitResponse:
     opp_id = opp_id_param
     service_name = service_param or title_param
@@ -159,7 +160,13 @@ def _generate_and_persist_kit(
     if not resolved_opp_id:
         resolved_opp_id = opp_id or (opportunities[0].id if opportunities else f"opp-{abs(hash(resolved_title)) % 100000}")
 
-    generated_kit = ai_engine_service.generate_income_kit(resolved_opp_id, resolved_title, user=current_user, db=db)
+    generated_kit = ai_engine_service.generate_income_kit(
+        resolved_opp_id,
+        resolved_title,
+        user=current_user,
+        db=db,
+        skill_name=skill_name,
+    )
 
     # Persist the 4 bundled asset blueprints into income_kits table
     assets_by_type = {a.type: a.model_dump() for a in generated_kit.assets}
@@ -200,6 +207,7 @@ def generate_income_kit(
     payload: Optional[GenerateIncomeKitBody] = Body(None),
     opportunityId: Optional[str] = Query(None),
     service: Optional[str] = Query(None),
+    skill: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Any:
@@ -214,7 +222,12 @@ def generate_income_kit(
         (payload.opportunityTitle if payload else None)
         or (payload.opportunity_title if payload else None)
     )
-    return _generate_and_persist_kit(db, current_user, opp_id, service_name, title_name)
+    skill_val = (
+        (payload.skill if payload else None)
+        or (payload.skill_name if payload else None)
+        or skill
+    )
+    return _generate_and_persist_kit(db, current_user, opp_id, service_name, title_name, skill_name=skill_val)
 
 
 # ---------------------------------------------------------------------------
@@ -226,11 +239,16 @@ def generate_income_kit(
 def get_current_income_kit(
     opportunityId: Optional[str] = Query(None),
     service: Optional[str] = Query(None),
+    skill: Optional[str] = Query(None),
     kit_id: Optional[str] = Query(None),
     id: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Any:
+    # If a specific service or opportunity is requested, generate/retrieve for that service
+    if service or opportunityId:
+        return _generate_and_persist_kit(db, current_user, opportunityId, service, None, skill_name=skill)
+
     target_id = kit_id or id
     if target_id:
         try:
@@ -244,9 +262,6 @@ def get_current_income_kit(
                 return _serialize_kit_record(kit, db=db, current_user=current_user)
         except ValueError:
             pass
-
-    if opportunityId or service:
-        return _generate_and_persist_kit(db, current_user, opportunityId, service, None)
 
     latest = (
         db.query(IncomeKit)

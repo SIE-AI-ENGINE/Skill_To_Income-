@@ -37,6 +37,7 @@ export const AuthUser = zod.object({
   target_role: zod.string().nullable().optional(),
   career_mode: zod.string().nullable().optional(),
   experience_level: zod.string().nullable().optional(),
+  experience: zod.string().nullable().optional(),
   income_goal: zod.union([zod.string(), zod.number()]).nullable().optional(),
   skills: zod.array(zod.string()).nullable().optional(),
   proof_project: zod.string().nullable().optional(),

@@ -47,14 +47,13 @@ export function useMe(
       try {
         const u = await getMe();
         if (!u) return null;
-        const localOnboarded = typeof window !== "undefined" && window.localStorage.getItem("onboarding_completed") === "true";
         return {
           ...u,
           id: String(u.id),
           name: u.name || (u as any).full_name || "User",
-          onboarded: Boolean(u.onboarded || u.onboarding_completed || localOnboarded),
+          onboarded: Boolean(u.onboarded ?? u.onboarding_completed),
           is_verified: Boolean(u.is_verified),
-          onboarding_completed: Boolean(u.onboarding_completed || localOnboarded),
+          onboarding_completed: Boolean(u.onboarding_completed),
         };
       } catch (err) {
         if ((err as ErrorType<unknown>)?.status === 401) return null;
@@ -62,6 +61,7 @@ export function useMe(
       }
     },
     retry: false,
+    refetchOnWindowFocus: false,
     ...options?.query,
   }) as UseQueryResult<AuthUserType | null, ErrorType<unknown>> & { queryKey: QueryKey };
   query.queryKey = queryKey;
@@ -103,7 +103,8 @@ function formatAuthUser(user: any): AuthUserType {
     role: user.role ?? null,
     target_role: user.target_role ?? user.career_mode ?? null,
     career_mode: user.career_mode ?? null,
-    experience_level: user.experience_level ?? null,
+    experience_level: user.experience_level ?? user.experience ?? null,
+    experience: user.experience ?? user.experience_level ?? null,
     income_goal: user.income_goal ?? null,
     skills: user.skills ?? null,
     proof_project: user.proof_project ?? null,
@@ -224,6 +225,7 @@ export const completeOnboarding = async (
   });
   if (typeof window !== "undefined") {
     window.localStorage.setItem("onboarding_completed", "true");
+    window.sessionStorage.removeItem("sie_onboarding_draft");
   }
   const user = data?.user || data;
   return formatAuthUser(user);
@@ -248,6 +250,8 @@ export const logout = async (options?: Parameters<typeof customFetch>[1]): Promi
   if (typeof window !== "undefined") {
     window.localStorage.removeItem("access_token");
     window.localStorage.removeItem("sie_token");
+    window.localStorage.removeItem("onboarding_completed");
+    window.sessionStorage.removeItem("sie_onboarding_draft");
   }
   return customFetch<void>("/api/auth/logout", { ...options, method: "POST" });
 };

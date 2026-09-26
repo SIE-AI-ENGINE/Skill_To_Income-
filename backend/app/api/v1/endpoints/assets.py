@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Any, List, Optional, Dict
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Body, Query
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from app.api.deps import get_db, get_current_user, oauth2_scheme
@@ -524,5 +524,35 @@ def tailor_proposal(
             portfolio_url=portfolio_url,
             github_repo_url=github_repo_url,
         ),
+    )
+
+
+@router.post("/generate")
+@router.post("/generate/")
+def generate_assets(
+    payload: Optional[Dict[str, Any]] = Body(None),
+    service: Optional[str] = Query(None),
+    skill: Optional[str] = Query(None),
+    opp_title: Optional[str] = Query(None),
+    skill_name: Optional[str] = Query(None),
+    opportunityId: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """Generate dynamic income kit assets for a given service and skill."""
+    from app.api.v1.endpoints.income_kits import _generate_and_store_kit
+
+    body = payload or {}
+    resolved_service = body.get("service") or body.get("opp_title") or body.get("opportunityTitle") or service or opp_title
+    resolved_skill = body.get("skill") or body.get("skill_name") or skill or skill_name
+    resolved_opp_id = body.get("opportunityId") or opportunityId
+
+    return _generate_and_store_kit(
+        current_user=current_user,
+        db=db,
+        opp_id_param=resolved_opp_id,
+        service_param=resolved_service,
+        title_param=resolved_service,
+        skill_name=resolved_skill,
     )
 

@@ -71,7 +71,7 @@ class UserResponse(UserBase):
     id: int
     created_at: Optional[datetime] = None
     onboarded: bool = False
-    skills: Optional[List[str]] = None
+    skills: List[str] = []
     primary_skill: Optional[str] = None
 
     @model_validator(mode="before")
@@ -81,34 +81,39 @@ class UserResponse(UserBase):
             d = dict(data.__dict__)
             d["name"] = getattr(data, "full_name", None) or getattr(data, "name", None) or "User"
             d["full_name"] = getattr(data, "full_name", None) or d["name"]
-            is_done = getattr(data, "onboarding_completed", False) or bool(
-                getattr(data, "career_mode", None) or (hasattr(data, "skills") and len(data.skills) > 0)
-            )
-            d["onboarding_completed"] = bool(is_done)
-            d["onboarded"] = bool(is_done)
+            is_done = bool(getattr(data, "onboarding_completed", False))
+            d["onboarding_completed"] = is_done
+            d["onboarded"] = is_done
             d["is_verified"] = getattr(data, "is_verified", False)
             d["github_username"] = getattr(data, "github_username", None)
             d["github_token"] = getattr(data, "github_token", None)
             d["linkedin_url"] = getattr(data, "linkedin_url", None)
             d["proof_project"] = getattr(data, "proof_project", None)
             d["target_weekly_hours"] = getattr(data, "target_weekly_hours", 10)
-            if hasattr(data, "skills") and data.skills:
-                skill_names = [s.core_skill for s in data.skills if hasattr(s, "core_skill")]
+            if hasattr(data, "skills") and data.skills is not None:
+                skill_names = [s.core_skill if hasattr(s, "core_skill") else str(s) for s in data.skills]
                 d["skills"] = skill_names
                 d["primary_skill"] = skill_names[0] if skill_names else None
+            elif hasattr(data, "skills_list") and data.skills_list:
+                d["skills"] = data.skills_list
+                d["primary_skill"] = data.skills_list[0]
+            elif "skills" not in d or d["skills"] is None:
+                d["skills"] = []
             return d
         elif isinstance(data, dict):
             data["name"] = data.get("full_name") or data.get("name") or "User"
             data["full_name"] = data.get("full_name") or data.get("name")
-            is_done = data.get("onboarding_completed", False) or data.get("onboarded", False)
-            data["onboarding_completed"] = bool(is_done)
-            data["onboarded"] = bool(is_done)
+            is_done = bool(data.get("onboarding_completed", False) or data.get("onboarded", False))
+            data["onboarding_completed"] = is_done
+            data["onboarded"] = is_done
             data["github_token"] = data.get("github_token")
             data["proof_project"] = data.get("proof_project")
             if "skills" in data and isinstance(data["skills"], list):
                 skill_names = [s if isinstance(s, str) else getattr(s, "core_skill", str(s)) for s in data["skills"]]
                 data["skills"] = skill_names
                 data["primary_skill"] = skill_names[0] if skill_names else None
+            else:
+                data["skills"] = []
             return data
         return data
 

@@ -201,11 +201,7 @@ def get_profile(
     if current_user.education or current_user.experience:
         completion += 10
 
-    is_onboarded = bool(
-        current_user.onboarding_completed
-        or current_user.career_mode
-        or len(skills) > 0
-    )
+    is_onboarded = bool(current_user.onboarding_completed)
 
     return ProfileResponse(
         name=current_user.full_name or "User",

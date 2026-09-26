@@ -5,6 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.models.user import User
+from app.db.models.skill import Skill
 from app.schemas.user import (
     UserCreate,
     UserResponse,
@@ -216,7 +217,12 @@ async def login(
     }
 
 @router.get("/me", response_model=UserResponse)
-def get_me(current_user: User = Depends(get_current_user)) -> Any:
+def get_me(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Any:
+    skills = db.query(Skill).filter(Skill.user_id == current_user.id).all()
+    current_user.skills = skills
     return current_user
 
 @router.post("/logout", status_code=status.HTTP_200_OK)

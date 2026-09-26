@@ -45,6 +45,7 @@ import {
   Play,
   Plus,
   RefreshCw,
+  Rocket,
   Search,
   Send,
   Settings2,
@@ -98,7 +99,13 @@ import NotFound from "@/pages/not-found";
 import { AuthProvider, authErrorMessage, useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 type Skill = SkillDecomposition;
 
@@ -1620,11 +1627,11 @@ function DashboardPage() {
               </div>
 
               <h2 className="display mt-3 text-2xl font-extrabold tracking-tight md:text-3xl">
-                {d.topOpportunity.title}
+                {d.topOpportunity.title?.replace(/\*\*/g, "")}
               </h2>
 
               <p className="mt-2.5 max-w-xl text-xs leading-relaxed text-muted-foreground md:text-sm">
-                {d.topOpportunity.whyNow || d.topOpportunity.description}
+                {(d.topOpportunity.whyNow || d.topOpportunity.description || "").replace(/\*\*/g, "")}
               </p>
             </div>
 
@@ -2796,7 +2803,7 @@ function OpportunitiesPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
-                        <h3 className="font-extrabold">{opp.title}</h3>
+                        <h3 className="font-extrabold">{opp.title?.replace(/\*\*/g, "")}</h3>
                         <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
                           <span>{opp.platform}</span>
                           <span>·</span>
@@ -2820,7 +2827,7 @@ function OpportunitiesPage() {
                       </span>
                     </div>
                     <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                      {opp.description}
+                      {(opp.description || "").replace(/\*\*/g, "")}
                     </p>
                     <div className="mt-4 flex flex-wrap gap-1.5">
                       {opp.tags.map((tag) => (
@@ -2895,7 +2902,7 @@ function OpportunityDetail({ opportunity }: { opportunity?: Opportunity }) {
     <div className="surface h-fit p-6 lg:sticky lg:top-24">
       <div className="eyebrow">Why this, why now</div>
       <h2 className="display mt-3 text-2xl font-extrabold leading-tight tracking-[-.05em]">
-        {opportunity.title}
+        {opportunity.title?.replace(/\*\*/g, "")}
       </h2>
       <div className="mt-5 flex items-center gap-3">
         <div
@@ -2914,7 +2921,7 @@ function OpportunityDetail({ opportunity }: { opportunity?: Opportunity }) {
         </span>
       </div>
       <p className="mt-4 text-xs leading-5 text-muted-foreground">
-        {opportunity.whyNow}
+        {(opportunity.whyNow || opportunity.description || "").replace(/\*\*/g, "")}
       </p>
       <div className="mt-6 space-y-3 border-t border-border/70 pt-6">
         <div className="flex justify-between text-xs">
@@ -2953,62 +2960,20 @@ function OpportunityDetail({ opportunity }: { opportunity?: Opportunity }) {
       <Button
         className="mt-7 w-full"
         disabled={isGenerating || kit.isPending}
-        onClick={async () => {
+        onClick={() => {
           if (!opportunity) return;
-          setIsGenerating(true);
-          try {
-            const token =
-              localStorage.getItem("access_token") ||
-              localStorage.getItem("sie_token") ||
-              "";
-            const headers: Record<string, string> = {
-              "Content-Type": "application/json",
-            };
-            if (token) {
-              headers["Authorization"] = `Bearer ${token}`;
-            }
-
-            const payload = {
-              opportunityId: opportunity.id,
-              opportunity_title: opportunity.title,
-              opportunityTitle: opportunity.title,
-              service: opportunity.title,
-              category: opportunity.tags?.[0] || "Software & Engineering",
-              deliverables: [opportunity.description],
-              platform: opportunity.platform,
-              target_budget: opportunity.expectedEarnings,
-            };
-
-            const res = await fetch("/api/v1/income-kit", {
-              method: "POST",
-              headers,
-              credentials: "include",
-              body: JSON.stringify(payload),
-            });
-
-            if (!res.ok) {
-              const err = await res.json().catch(() => ({}));
-              throw new Error(err.detail || "Failed to generate kit");
-            }
-
-            const data = await res.json();
-            const kitId = data.id;
-            if (kitId) {
-              localStorage.setItem("sie_active_kit_id", String(kitId));
-              localStorage.setItem("sie_active_opportunity_title", opportunity.title);
-            }
-            qc.invalidateQueries({ queryKey: getGetIncomeKitQueryKey() });
-            qc.invalidateQueries({ queryKey: ["income-kit"] });
-            qc.invalidateQueries({ queryKey: getGetAssetsQueryKey() });
-            qc.invalidateQueries({ queryKey: ["assets"] });
-
-            setLocation(kitId ? `/income-kit?id=${kitId}` : `/income-kit?opportunityId=${encodeURIComponent(opportunity.id)}&service=${encodeURIComponent(opportunity.title)}`);
-          } catch (err) {
-            console.error("Failed to bind opportunity kit generation:", err);
-            setLocation(`/income-kit?opportunityId=${encodeURIComponent(opportunity.id)}&service=${encodeURIComponent(opportunity.title)}`);
-          } finally {
-            setIsGenerating(false);
-          }
+          const selectedOpp = opportunity;
+          const skillName =
+            (selectedOpp as any).skillName ||
+            (selectedOpp as any).skill ||
+            (selectedOpp.tags && selectedOpp.tags[0]) ||
+            "";
+          setLocation(
+            '/income-kit?service=' +
+              encodeURIComponent(selectedOpp.title) +
+              '&skill=' +
+              encodeURIComponent(skillName)
+          );
         }}
         testId="button-generate-kit"
       >
@@ -3030,12 +2995,445 @@ function OpportunityDetail({ opportunity }: { opportunity?: Opportunity }) {
 }
 
 const ASSET_TABS = [
-  { id: "all", label: "All Assets", icon: Grid2X2 },
+  { id: "all", label: "7-Day Launchpad", icon: Rocket },
   { id: "Gig listing", label: "Gig Listing", icon: FileText },
   { id: "Portfolio project", label: "GitHub Project", icon: BriefcaseBusiness },
   { id: "Landing page", label: "Landing Page", icon: Globe2 },
   { id: "Outreach scripts", label: "Outreach Script", icon: MessageSquareText },
 ];
+
+function ClipboardButton({
+  text,
+  label = "Copy",
+  size = "sm",
+  variant = "ghost",
+  className = "",
+}: {
+  text: string;
+  label?: string;
+  size?: "sm" | "xs";
+  variant?: "ghost" | "secondary" | "primary";
+  className?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={`inline-flex items-center gap-1.5 rounded-lg font-bold transition-all ${
+        size === "xs" ? "px-2 py-1 text-[11px]" : "px-2.5 py-1.5 text-xs"
+      } ${
+        copied
+          ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 font-extrabold"
+          : variant === "primary"
+            ? "bg-primary text-primary-foreground shadow-sm hover:brightness-105"
+            : variant === "secondary"
+              ? "bg-secondary text-foreground hover:bg-secondary/80 border border-border/80"
+              : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+      } ${className}`}
+      title={label}
+    >
+      {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+      <span>{copied ? "Copied!" : label}</span>
+    </button>
+  );
+}
+
+function calculateDynamicTiers(options: {
+  expectedReturn?: string;
+  expectedEarnings?: string;
+  demand?: number;
+  competition?: number;
+}) {
+  const returnStr = options.expectedReturn || options.expectedEarnings || "";
+  const cleanStr = returnStr.replace(/,/g, "");
+  const matches = cleanStr.match(/\d+(?:\.\d+)?/g);
+  const parsedNums = matches ? matches.map(Number).filter((n) => n >= 100) : [];
+
+  let minReturn = 0;
+  let maxReturn = 0;
+
+  if (parsedNums.length >= 2) {
+    minReturn = Math.min(parsedNums[0], parsedNums[1]);
+    maxReturn = Math.max(parsedNums[0], parsedNums[1]);
+  } else if (parsedNums.length === 1) {
+    minReturn = Math.round((parsedNums[0] * 0.7) / 100) * 100;
+    maxReturn = Math.round((parsedNums[0] * 1.3) / 100) * 100;
+  }
+
+  if (!minReturn || !maxReturn || minReturn <= 0 || maxReturn <= 0) {
+    const demand = typeof options.demand === "number" && !isNaN(options.demand) ? options.demand : 85;
+    const competition = typeof options.competition === "number" && !isNaN(options.competition) && options.competition > 0 ? options.competition : 35;
+    const basePrice = Math.round((1500 * Math.max(1.2, demand / competition)) / 100) * 100;
+    minReturn = basePrice * 2;
+    maxReturn = basePrice * 4;
+  }
+
+  const basic = Math.round((minReturn * 0.6) / 100) * 100;
+  const standard = Math.round(((minReturn + maxReturn) / 2) / 100) * 100;
+  const premium = Math.round((maxReturn * 1.4) / 100) * 100;
+
+  return {
+    minReturn,
+    maxReturn,
+    basic,
+    standard,
+    premium,
+    basicInr: `₹${basic.toLocaleString("en-IN")}`,
+    standardInr: `₹${standard.toLocaleString("en-IN")}`,
+    premiumInr: `₹${premium.toLocaleString("en-IN")}`,
+    basicUsd: `$${Math.round(basic / 85)}`,
+    standardUsd: `$${Math.round(standard / 85)}`,
+    premiumUsd: `$${Math.round(premium / 85)}`,
+  };
+}
+
+function ExecutionLaunchpad({
+  current,
+  onSelectTab,
+  onOpenGithubDeploy,
+  dynamicTiers,
+}: {
+  current: IncomeKit;
+  onSelectTab: (tabId: string) => void;
+  onOpenGithubDeploy: () => void;
+  dynamicTiers: ReturnType<typeof calculateDynamicTiers>;
+}) {
+  const kitId = Number(current.id) || 1;
+  const gigAsset = current.assets.find((a) => a.type === "Gig listing") || current.assets[0];
+  const repoAsset = current.assets.find((a) => a.type === "Portfolio project") || current.assets[1];
+  const landingAsset = current.assets.find((a) => a.type === "Landing page") || current.assets[2];
+  const outreachAsset = current.assets.find((a) => a.type === "Outreach scripts") || current.assets[3];
+
+  const cards = [
+    {
+      tabId: "Gig listing",
+      icon: FileText,
+      name: "Gig Listing Specification",
+      badge: "Fiverr / Upwork Ready",
+      description: "Search tags, 3-tier delivery milestones, and objection-handling FAQs.",
+      asset: gigAsset,
+    },
+    {
+      tabId: "Portfolio project",
+      icon: BriefcaseBusiness,
+      name: "GitHub Proof & Code Scaffold",
+      badge: "Architecture & Code",
+      description: "Complete modular codebase, architecture README, and verification test suite.",
+      asset: repoAsset,
+    },
+    {
+      tabId: "Landing page",
+      icon: Globe2,
+      name: "High-Conversion Landing Page",
+      badge: "Single-Page Web",
+      description: "Client demonstration site, ROI calculator, and lead intake form.",
+      asset: landingAsset,
+    },
+    {
+      tabId: "Outreach scripts",
+      icon: MessageSquareText,
+      name: "Multi-Channel Outreach Engine",
+      badge: "Email / LinkedIn / DM",
+      description: "Targeted cold email sequence, 300-char LinkedIn note, and WhatsApp pitch.",
+      asset: outreachAsset,
+    },
+  ];
+
+  const roadmapPhases = [
+    {
+      phase: "Phase 1",
+      days: "Days 1–2",
+      title: "GitHub Proof & Code Scaffold",
+      icon: Code,
+      steps: [
+        "Deploy scaffold repo to GitHub with 1-click publisher",
+        "Verify all automated tests run clean and pass",
+        "Add live showcase link to your profile bio",
+      ],
+      deliverable: "Live GitHub Repository with README proof",
+    },
+    {
+      phase: "Phase 2",
+      days: "Day 3",
+      title: "Service Listing & Packaging",
+      icon: FileText,
+      steps: [
+        "Publish gig on Fiverr and Upwork Project Catalog",
+        "Configure Basic, Standard, and Premium price tiers",
+        "Paste 5 high-intent tags to secure search indexing",
+      ],
+      deliverable: "2 Published Platform Gigs",
+    },
+    {
+      phase: "Phase 3",
+      days: "Days 4–5",
+      title: "Multi-Channel Direct Outreach",
+      icon: Send,
+      steps: [
+        "Send tailored cold email sequence to 15 targeted companies",
+        "Connect with 20 engineering managers via LinkedIn note",
+        "Engage relevant developer communities with proof case-study",
+      ],
+      deliverable: "35 High-Intent Outreach Contacts",
+    },
+    {
+      phase: "Phase 4",
+      days: "Days 6–7",
+      title: "Follow-up & Client Closing",
+      icon: CheckCircle2,
+      steps: [
+        "Follow up with opens & warm profile viewers",
+        "Send WhatsApp/DM pitch for immediate scoping call",
+        "Offer 48-hr pilot sprint at Basic Tier pricing",
+      ],
+      deliverable: "First Paid Milestone / Pilot Sprint Secured",
+    },
+  ];
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-300">
+      {/* Launchpad Header & Quick Actions Bar */}
+      <div className="surface flex flex-col gap-4 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/[0.04] via-card to-primary/[0.02] p-6 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
+            <Rocket size={14} /> 7-Day First-Client Launchpad
+          </div>
+          <h3 className="mt-2 text-xl font-extrabold text-foreground">
+            From Raw Skills to Client Income in 7 Days
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Your 4 assets are fully generated and calibrated. Follow the structured sequence to launch your service.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <a
+            href={`/api/v1/assets/${kitId}/download`}
+            download
+            className="inline-flex items-center gap-2 rounded-xl border border-border/80 bg-secondary/80 px-3.5 py-2 text-xs font-bold text-foreground transition-all hover:bg-secondary hover:text-foreground"
+            data-testid="button-launchpad-download-zip"
+            title="Export Income Kit (.zip)"
+          >
+            <Download size={14} />
+            <span>Export Income Kit (.zip)</span>
+          </a>
+          <button
+            type="button"
+            onClick={onOpenGithubDeploy}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#24292F] px-4 py-2 text-xs font-bold text-white shadow-md transition-all hover:bg-[#1b1f23] dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+            data-testid="button-launchpad-deploy-github"
+          >
+            <Github size={14} />
+            <span>1-Click Deploy to GitHub</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Part 1: Asset Readiness & Status */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-extrabold text-foreground uppercase tracking-wider">
+              1. Asset Readiness & Status
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              Click any card to inspect or customize the full asset in its dedicated workspace.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {cards.map((c, idx) => {
+            const Icon = c.icon;
+            return (
+              <div
+                key={idx}
+                onClick={() => onSelectTab(c.tabId)}
+                className="group surface relative flex flex-col justify-between cursor-pointer rounded-2xl border border-border/80 p-5 transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg"
+                data-testid={`card-launchpad-asset-${idx}`}
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                      <Icon size={18} />
+                    </div>
+                    <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                      Ready
+                    </span>
+                  </div>
+
+                  <h5 className="mt-4 font-bold text-foreground group-hover:text-primary transition-colors">
+                    {c.name}
+                  </h5>
+                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                    {(c.asset?.description || c.description).replace(/\*\*/g, "")}
+                  </p>
+                </div>
+
+                <div className="mt-5 flex items-center justify-between border-t border-border/70 pt-3">
+                  <span className="text-[11px] font-semibold text-primary flex items-center gap-1 group-hover:underline">
+                    Open Editor <ArrowRight size={11} />
+                  </span>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <ClipboardButton
+                      text={c.asset?.content || ""}
+                      label="Copy"
+                      size="xs"
+                      variant="secondary"
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Part 2: 7-Day First-Client Roadmap */}
+      <div>
+        <div className="mb-4">
+          <h4 className="text-sm font-extrabold text-foreground uppercase tracking-wider">
+            2. 7-Day First-Client Roadmap
+          </h4>
+          <p className="text-xs text-muted-foreground">
+            A battle-tested 4-phase execution path to validate and monetize this opportunity.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {roadmapPhases.map((phase, idx) => {
+            const PhaseIcon = phase.icon;
+            return (
+              <div
+                key={idx}
+                className="surface relative flex flex-col justify-between rounded-2xl border border-border/80 p-5 shadow-sm"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="mono rounded-lg bg-secondary px-2 py-0.5 text-[11px] font-bold text-foreground">
+                      {phase.days}
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                      {phase.phase}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <PhaseIcon size={16} className="text-primary" />
+                    <h5 className="font-extrabold text-foreground text-sm">{phase.title}</h5>
+                  </div>
+
+                  <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
+                    {phase.steps.map((step, sIdx) => (
+                      <li key={sIdx} className="flex items-start gap-2">
+                        <Check size={13} className="mt-0.5 shrink-0 text-emerald-500" />
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="mt-5 rounded-xl bg-secondary/50 p-2.5 text-[11px]">
+                  <span className="font-bold text-foreground">Milestone: </span>
+                  <span className="text-muted-foreground">{phase.deliverable}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Part 3: Commercial Strategy */}
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-extrabold text-foreground uppercase tracking-wider">
+              3. Commercial Strategy & Calibrated Pricing
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              Real-time dynamically calculated rate cards calibrated to current market demand.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {/* Basic */}
+          <div className="surface rounded-2xl border border-border/80 p-5 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Basic Tier</span>
+                <span className="rounded-md bg-secondary px-2 py-0.5 text-[11px] font-bold text-muted-foreground">2 Days</span>
+              </div>
+              <h5 className="mt-2 text-base font-extrabold text-foreground">Starter Pilot Sprint</h5>
+              <div className="mt-3 text-2xl font-black text-foreground">
+                {dynamicTiers.basicInr}
+                <span className="ml-1 text-xs font-normal text-muted-foreground">({dynamicTiers.basicUsd})</span>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                Zero-friction introductory offer for fast-turnaround single deliverables or bug fixes.
+              </p>
+            </div>
+            <div className="mt-4 border-t border-border/70 pt-3 text-[11px] text-muted-foreground">
+              ✓ 1 Core deliverable · 1 Revision cycle
+            </div>
+          </div>
+
+          {/* Standard */}
+          <div className="surface relative rounded-2xl border-2 border-primary bg-card p-5 shadow-md ring-4 ring-primary/5 flex flex-col justify-between">
+            <div className="absolute -top-3 right-4 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white shadow-sm">
+              Most Popular
+            </div>
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-primary">Standard Tier</span>
+                <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">4 Days</span>
+              </div>
+              <h5 className="mt-2 text-base font-extrabold text-foreground">Full Solution Package</h5>
+              <div className="mt-3 text-2xl font-black text-foreground">
+                {dynamicTiers.standardInr}
+                <span className="ml-1 text-xs font-normal text-muted-foreground">({dynamicTiers.standardUsd})</span>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                Complete end-to-end service implementation with tests, deployment guide, and integration.
+              </p>
+            </div>
+            <div className="mt-4 border-t border-border/70 pt-3 text-[11px] font-semibold text-primary">
+              ✓ Full solution · 3 Revisions · Deployment support
+            </div>
+          </div>
+
+          {/* Premium */}
+          <div className="surface rounded-2xl border border-border/80 p-5 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Premium Tier</span>
+                <span className="rounded-md bg-secondary px-2 py-0.5 text-[11px] font-bold text-muted-foreground">7 Days</span>
+              </div>
+              <h5 className="mt-2 text-base font-extrabold text-foreground">Enterprise Retainer</h5>
+              <div className="mt-3 text-2xl font-black text-foreground">
+                {dynamicTiers.premiumInr}
+                <span className="ml-1 text-xs font-normal text-muted-foreground">({dynamicTiers.premiumUsd})</span>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                Custom production architecture, performance tuning, priority 24/7 SLA, and ongoing advisory.
+              </p>
+            </div>
+            <div className="mt-4 border-t border-border/70 pt-3 text-[11px] text-muted-foreground">
+              ✓ Production deployment · Unlimited revisions · 14-day warranty
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function IncomeKitPage() {
   const [location, setLocation] = useLocation();
@@ -3048,12 +3446,13 @@ function IncomeKitPage() {
     return new URLSearchParams(query);
   }, [location]);
 
+  const serviceParam = searchParams.get("service") || "";
+  const skillParam = searchParams.get("skill") || "";
+  const opportunityIdParam = searchParams.get("opportunityId") || "";
   const kitIdParam =
     searchParams.get("id") ||
     searchParams.get("kit_id") ||
-    (typeof window !== "undefined" ? localStorage.getItem("sie_active_kit_id") : null);
-  const opportunityIdParam = searchParams.get("opportunityId") || "";
-  const serviceParam = searchParams.get("service") || "";
+    (!serviceParam && typeof window !== "undefined" ? localStorage.getItem("sie_active_kit_id") : null);
 
   const q = useGetIncomeKit();
   const generation = useGenerateIncomeKit();
@@ -3063,14 +3462,100 @@ function IncomeKitPage() {
   const [editing, setEditing] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [triggeredKey, setTriggeredKey] = useState<string>("");
+  const [isGeneratingService, setIsGeneratingService] = useState(false);
+  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
 
   const current = kit ?? q.data;
 
+  const opportunitiesQuery = useGetOpportunities();
+  const opportunities = opportunitiesQuery.data || [];
+
+  const matchedOpp = useMemo(() => {
+    if (!current) return null;
+    return (
+      opportunities.find(
+        (o) =>
+          o.id === current.opportunityId ||
+          o.title.toLowerCase() === (current.opportunityTitle || current.title || "").toLowerCase()
+      ) || null
+    );
+  }, [current, opportunities]);
+
+  const dynamicTiers = useMemo(() => {
+    return calculateDynamicTiers({
+      expectedReturn: (matchedOpp as any)?.expectedReturn || matchedOpp?.expectedEarnings || (current as any)?.expectedEarnings,
+      expectedEarnings: matchedOpp?.expectedEarnings || (current as any)?.expectedEarnings,
+      demand: matchedOpp?.demand,
+      competition: matchedOpp?.competition,
+    });
+  }, [matchedOpp, current]);
+
   // Auto-generate or fetch with auth token on mount if no kit is loaded or if route params provided
   useEffect(() => {
-    const currentKey = `${kitIdParam || ""}:${opportunityIdParam}:${serviceParam}`;
-    if (triggeredKey === currentKey && currentKey !== "::") return;
+    const currentKey = `${serviceParam}:${skillParam}:${kitIdParam || ""}:${opportunityIdParam}`;
+    if (triggeredKey === currentKey && currentKey !== ":::") return;
 
+    // Priority 1: If a service title is present, dynamically synthesize and load the tailored Income Kit
+    if (serviceParam) {
+      setTriggeredKey(currentKey);
+      setIsGeneratingService(true);
+      const token =
+        localStorage.getItem("access_token") ||
+        localStorage.getItem("sie_token") ||
+        "";
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      fetch("/api/v1/assets/generate", {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({
+          service: serviceParam,
+          skill: skillParam,
+          opportunityId: opportunityIdParam || undefined,
+          opp_title: serviceParam,
+          skill_name: skillParam,
+        }),
+      })
+        .then((res) => {
+          if (!res.ok) {
+            return fetch(
+              `/api/v1/income-kit?service=${encodeURIComponent(serviceParam)}&skill=${encodeURIComponent(skillParam)}&opportunityId=${encodeURIComponent(opportunityIdParam)}`,
+              { headers, credentials: "include" }
+            ).then((r) => {
+              if (!r.ok) throw new Error("Failed to load or generate kit for service");
+              return r.json();
+            });
+          }
+          return res.json();
+        })
+        .then((data) => {
+          if (data && data.assets && data.assets.length > 0) {
+            setKit(data);
+            if (data.id) {
+              localStorage.setItem("sie_active_kit_id", String(data.id));
+            }
+            if (data.opportunityTitle || data.title) {
+              localStorage.setItem(
+                "sie_active_opportunity_title",
+                data.opportunityTitle || data.title
+              );
+            }
+            qc.invalidateQueries({ queryKey: getGetIncomeKitQueryKey() });
+            qc.invalidateQueries({ queryKey: getGetAssetsQueryKey() });
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to generate income kit for service:", err);
+        })
+        .finally(() => {
+          setIsGeneratingService(false);
+        });
+      return;
+    }
+
+    // Priority 2: If a kit ID is explicitly given in the query parameters (without a service override)
     if (kitIdParam) {
       setTriggeredKey(currentKey);
       const token =
@@ -3103,7 +3588,7 @@ function IncomeKitPage() {
       return;
     }
 
-    if (opportunityIdParam || serviceParam) {
+    if (opportunityIdParam) {
       setTriggeredKey(currentKey);
       generation.mutate(
         {
@@ -3142,13 +3627,13 @@ function IncomeKitPage() {
         },
       );
     }
-  }, [kitIdParam, opportunityIdParam, serviceParam, current, q.isLoading, generation.isPending, triggeredKey, qc]);
+  }, [kitIdParam, opportunityIdParam, serviceParam, skillParam, current, q.isLoading, generation.isPending, triggeredKey, qc]);
 
   const generate = () => {
     const oppId = current?.opportunityId || opportunityIdParam || undefined;
     const srv = current?.opportunityTitle || current?.title || serviceParam || undefined;
     generation.mutate(
-      { data: { opportunityId: oppId, service: srv } },
+      { data: { opportunityId: oppId, service: srv, skill: skillParam || undefined } as any },
       {
         onSuccess: (result) => {
           setKit(result);
@@ -3185,7 +3670,7 @@ function IncomeKitPage() {
   if (!current) {
     return (
       <Page eyebrow="04 / Build" title="Income kit">
-        {generation.isPending || q.isLoading ? (
+        {generation.isPending || q.isLoading || isGeneratingService ? (
           <div className="space-y-5">
             <div className="surface p-6">
               <div className="skeleton h-4 w-40 rounded" />
@@ -3228,6 +3713,16 @@ function IncomeKitPage() {
     ? current.assets
     : current.assets.filter((a) => a.type.toLowerCase().includes(activeTab.toLowerCase()) || activeTab.toLowerCase().includes(a.type.toLowerCase()));
 
+  const portfolioAsset = current.assets.find(
+    (a) => a.type === "Portfolio project"
+  );
+  const existingRepoUrl =
+    (portfolioAsset as any)?.url ||
+    portfolioAsset?.content?.match(
+      /https:\/\/github\.com\/[a-zA-Z0-9_\-\.]+\/[a-zA-Z0-9_\-\.]+/
+    )?.[0] ||
+    null;
+
   return (
     <Page
       eyebrow="04 / Build"
@@ -3243,7 +3738,7 @@ function IncomeKitPage() {
         <div>
           <div className="eyebrow">Selected opportunity</div>
           <h2 className="mt-2 text-lg font-extrabold">
-            {current.opportunityTitle || current.title || (typeof window !== "undefined" ? localStorage.getItem("sie_active_opportunity_title") : "") || "Micro-Service Income Kit"}
+            {(current.opportunityTitle || current.title || (typeof window !== "undefined" ? localStorage.getItem("sie_active_opportunity_title") : "") || "Micro-Service Income Kit").replace(/\*\*/g, "")}
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
             Generated{" "}
@@ -3292,19 +3787,16 @@ function IncomeKitPage() {
         })}
       </div>
 
-      <div className={`grid gap-6 ${activeTab === "all" ? "xl:grid-cols-2" : "grid-cols-1"}`}>
-        {displayedAssets.map((asset) => {
-          const portfolioAsset = displayedAssets.find(
-            (a) => a.type === "Portfolio project"
-          );
-          const existingRepoUrl =
-            (portfolioAsset as any)?.url ||
-            portfolioAsset?.content?.match(
-              /https:\/\/github\.com\/[a-zA-Z0-9_\-\.]+\/[a-zA-Z0-9_\-\.]+/
-            )?.[0] ||
-            null;
-
-          return (
+      {activeTab === "all" ? (
+        <ExecutionLaunchpad
+          current={current}
+          onSelectTab={(tabId) => setActiveTab(tabId)}
+          onOpenGithubDeploy={() => setIsDeployModalOpen(true)}
+          dynamicTiers={dynamicTiers}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-6">
+          {displayedAssets.map((asset) => (
             <KitAssetCard
               asset={asset}
               key={asset.id}
@@ -3315,6 +3807,7 @@ function IncomeKitPage() {
               onEdit={() => setEditing(editing === asset.id ? null : asset.id)}
               onSave={(updatedContent) => saveAsset(asset, updatedContent)}
               updatePending={update.isPending}
+              dynamicTiers={dynamicTiers}
               onDeploySuccess={() => {
                 qc.invalidateQueries({ queryKey: getGetAssetsQueryKey() });
                 qc.invalidateQueries({ queryKey: getGetIncomeKitQueryKey() });
@@ -3322,53 +3815,24 @@ function IncomeKitPage() {
                 qc.invalidateQueries({ queryKey: ["dashboard"] });
               }}
             />
-          );
-        })}
-      </div>
-    </Page>
-  );
-}
+          ))}
+        </div>
+      )}
 
-function ClipboardButton({
-  text,
-  label = "Copy",
-  size = "sm",
-  variant = "ghost",
-  className = "",
-}: {
-  text: string;
-  label?: string;
-  size?: "sm" | "xs";
-  variant?: "ghost" | "secondary" | "primary";
-  className?: string;
-}) {
-  const [copied, setCopied] = useState(false);
-  const handleCopy = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className={`inline-flex items-center gap-1.5 rounded-lg font-bold transition-all ${
-        size === "xs" ? "px-2 py-1 text-[11px]" : "px-2.5 py-1.5 text-xs"
-      } ${
-        copied
-          ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 font-extrabold"
-          : variant === "primary"
-            ? "bg-primary text-primary-foreground shadow-sm hover:brightness-105"
-            : variant === "secondary"
-              ? "bg-secondary text-foreground hover:bg-secondary/80 border border-border/80"
-              : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-      } ${className}`}
-      title={label}
-    >
-      {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-      <span>{copied ? "Copied!" : label}</span>
-    </button>
+      <GitHubDeployModal
+        isOpen={isDeployModalOpen}
+        onClose={() => setIsDeployModalOpen(false)}
+        kitId={Number(current.id) || 1}
+        opportunityTitle={current.opportunityTitle || current.title || ""}
+        onSuccess={(repoUrl) => {
+          setIsDeployModalOpen(false);
+          qc.invalidateQueries({ queryKey: getGetAssetsQueryKey() });
+          qc.invalidateQueries({ queryKey: getGetIncomeKitQueryKey() });
+          qc.invalidateQueries({ queryKey: ["deployments"] });
+          qc.invalidateQueries({ queryKey: ["dashboard"] });
+        }}
+      />
+    </Page>
   );
 }
 
@@ -3471,12 +3935,18 @@ function FormattedMarkdownText({ text, className = "" }: { text: string; classNa
   );
 }
 
-function GigListingViewer({ content }: { content: string }) {
+function GigListingViewer({
+  content,
+  dynamicTiers,
+}: {
+  content: string;
+  dynamicTiers?: ReturnType<typeof calculateDynamicTiers>;
+}) {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   // Parse title
   const titleMatch = content.match(/^#\s*(?:Gig Title:)?\s*([^\n]+)/m);
-  const gigTitle = titleMatch ? titleMatch[1].trim() : "";
+  const gigTitle = titleMatch ? titleMatch[1].replace(/\*\*/g, "").trim() : "";
 
   // Parse description
   const descMatch = content.match(/## Description\s*\n([\s\S]*?)(?=\n## Pricing Tiers|\n## Platform Search Tags|$)/i);
@@ -3502,8 +3972,8 @@ function GigListingViewer({ content }: { content: string }) {
           // | Tier | Package Name | Deliverables | Delivery | Revisions | Price (INR) | Price (USD) |
           tiers.push({
             tier: cols[0].replace(/\*\*/g, ""),
-            packageTitle: cols[1],
-            deliverables: cols[2].split(/[,;•]/).map((s) => s.trim()).filter(Boolean),
+            packageTitle: cols[1].replace(/\*\*/g, ""),
+            deliverables: cols[2].split(/[,;•]/).map((s) => s.trim().replace(/\*\*/g, "")).filter(Boolean),
             delivery: cols[3],
             revisions: cols[4],
             priceInr: cols[5],
@@ -3516,7 +3986,7 @@ function GigListingViewer({ content }: { content: string }) {
           tiers.push({
             tier: cols[0].replace(/\*\*/g, ""),
             packageTitle: `${cols[0].replace(/\*\*/g, "")} Package`,
-            deliverables: cols[4].split(/[,;•]/).map((s) => s.trim()).filter(Boolean),
+            deliverables: cols[4].split(/[,;•]/).map((s) => s.trim().replace(/\*\*/g, "")).filter(Boolean),
             delivery: cols[2],
             revisions: cols[3],
             priceInr: inr || "₹3,500",
@@ -3526,6 +3996,36 @@ function GigListingViewer({ content }: { content: string }) {
       }
     }
   }
+
+  const effectiveTiers: PricingTierData[] = tiers.length > 0 ? tiers : [
+    {
+      tier: "Basic",
+      packageTitle: "Starter Pilot Sprint",
+      deliverables: ["1 Core deliverable / microservice", "Verification test suite", "Basic README documentation"],
+      delivery: "2 Days",
+      revisions: "1 Revision",
+      priceInr: dynamicTiers?.basicInr || "₹4,300",
+      priceUsd: dynamicTiers?.basicUsd || "$51",
+    },
+    {
+      tier: "Standard",
+      packageTitle: "Complete Solution Package",
+      deliverables: ["Full microservice implementation", "Automated tests & API schemas", "Deployment guide & script", "Client onboarding support"],
+      delivery: "4 Days",
+      revisions: "3 Revisions",
+      priceInr: dynamicTiers?.standardInr || "₹10,800",
+      priceUsd: dynamicTiers?.standardUsd || "$127",
+    },
+    {
+      tier: "Premium",
+      packageTitle: "Enterprise Production Grade",
+      deliverables: ["Production-ready architecture", "Multi-platform integration", "Performance optimization", "Priority 24/7 SLA & 14-day warranty"],
+      delivery: "7 Days",
+      revisions: "Unlimited Revisions",
+      priceInr: dynamicTiers?.premiumInr || "₹20,200",
+      priceUsd: dynamicTiers?.premiumUsd || "$238",
+    },
+  ];
 
   // Parse FAQs
   const faqMatch = content.match(/## Frequently Asked Questions[^\n]*\s*\n([\s\S]*)/i);
@@ -3579,77 +4079,100 @@ function GigListingViewer({ content }: { content: string }) {
       )}
 
       {/* 3-Column Pricing Tier Cards */}
-      {tiers.length > 0 ? (
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-extrabold text-foreground">3-Tier Pricing Architecture</h4>
-              <p className="text-xs text-muted-foreground">Calibrated INR & USD pricing with delivery timelines and scope.</p>
-            </div>
-            <ClipboardButton
-              text={tiersMatch ? tiersMatch[0] : ""}
-              label="Copy Pricing Tiers"
-              size="xs"
-            />
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-extrabold text-foreground">3-Tier Pricing Architecture</h4>
+            <p className="text-xs text-muted-foreground">Calibrated INR & USD pricing with delivery timelines and scope.</p>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            {tiers.map((t, idx) => {
-              const isPopular = t.tier.toLowerCase().includes("standard");
-              return (
-                <div
-                  key={idx}
-                  className={`relative flex flex-col justify-between rounded-2xl p-4.5 transition-all ${
-                    isPopular
-                      ? "border-2 border-primary bg-card shadow-[0_12px_28px_rgba(33,105,195,.12)] ring-4 ring-primary/5"
-                      : "border border-border/80 bg-card/60 hover:border-border hover:bg-card"
-                  }`}
-                >
-                  {isPopular && (
-                    <div className="absolute -top-3 right-4 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white shadow-sm">
-                      Most Popular
-                    </div>
-                  )}
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        {t.tier}
-                      </span>
-                      <span className="rounded-md bg-secondary/80 px-2 py-0.5 text-[11px] font-bold text-muted-foreground">
-                        {t.delivery}
-                      </span>
-                    </div>
-                    <div className="mt-2 text-sm font-bold text-foreground">
-                      {renderInlineMarkdown(t.packageTitle)}
-                    </div>
-                    <div className="mt-3 flex items-baseline gap-2">
-                      <span className="text-2xl font-black text-foreground tracking-tight">
-                        {t.priceInr}
-                      </span>
-                    </div>
-                    <div className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary">
-                      <span>•</span> {t.revisions}
-                    </div>
+          <ClipboardButton
+            text={tiersMatch ? tiersMatch[0] : ""}
+            label="Copy Pricing Tiers"
+            size="xs"
+          />
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {effectiveTiers.map((t, idx) => {
+            const isPopular = t.tier.toLowerCase().includes("standard");
+            const tierNameLower = t.tier.toLowerCase();
+            const displayPriceInr = dynamicTiers
+              ? tierNameLower.includes("basic")
+                ? dynamicTiers.basicInr
+                : tierNameLower.includes("standard")
+                  ? dynamicTiers.standardInr
+                  : tierNameLower.includes("premium")
+                    ? dynamicTiers.premiumInr
+                    : t.priceInr
+              : t.priceInr;
+            const displayPriceUsd = dynamicTiers
+              ? tierNameLower.includes("basic")
+                ? dynamicTiers.basicUsd
+                : tierNameLower.includes("standard")
+                  ? dynamicTiers.standardUsd
+                  : tierNameLower.includes("premium")
+                    ? dynamicTiers.premiumUsd
+                    : t.priceUsd
+              : t.priceUsd;
 
-                    <div className="mt-4 border-t border-border/70 pt-3">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                        Deliverables:
-                      </div>
-                      <ul className="space-y-1.5 text-xs text-muted-foreground">
-                        {t.deliverables.map((d, dIdx) => (
-                          <li key={dIdx} className="flex items-start gap-2">
-                            <Check size={13} className="mt-0.5 shrink-0 text-emerald-500" />
-                            <span className="leading-snug">{renderInlineMarkdown(d)}</span>
-                          </li>
-                        ))}
-                      </ul>
+            return (
+              <div
+                key={idx}
+                className={`relative flex flex-col justify-between rounded-2xl p-4.5 transition-all ${
+                  isPopular
+                    ? "border-2 border-primary bg-card shadow-[0_12px_28px_rgba(33,105,195,.12)] ring-4 ring-primary/5"
+                    : "border border-border/80 bg-card/60 hover:border-border hover:bg-card"
+                }`}
+              >
+                {isPopular && (
+                  <div className="absolute -top-3 right-4 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white shadow-sm">
+                    Most Popular
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      {t.tier.replace(/\*\*/g, "")}
+                    </span>
+                    <span className="rounded-md bg-secondary/80 px-2 py-0.5 text-[11px] font-bold text-muted-foreground">
+                      {t.delivery}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-sm font-bold text-foreground">
+                    {renderInlineMarkdown((t.packageTitle || "").replace(/\*\*/g, ""))}
+                  </div>
+                  <div className="mt-3 flex items-baseline gap-2">
+                    <span className="text-2xl font-black text-foreground tracking-tight">
+                      {displayPriceInr}
+                    </span>
+                    {displayPriceUsd && (
+                      <span className="text-xs font-normal text-muted-foreground">
+                        ({displayPriceUsd})
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary">
+                    <span>•</span> {t.revisions}
+                  </div>
+
+                  <div className="mt-4 border-t border-border/70 pt-3">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                      Deliverables:
                     </div>
+                    <ul className="space-y-1.5 text-xs text-muted-foreground">
+                      {t.deliverables.map((d, dIdx) => (
+                        <li key={dIdx} className="flex items-start gap-2">
+                          <Check size={13} className="mt-0.5 shrink-0 text-emerald-500" />
+                          <span className="leading-snug">{renderInlineMarkdown(d.replace(/\*\*/g, ""))}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
-      ) : null}
+      </div>
 
       {/* Description */}
       {description && (
@@ -5335,6 +5858,7 @@ function KitAssetCard({
   onSave,
   updatePending,
   onDeploySuccess,
+  dynamicTiers,
 }: {
   asset: KitAsset;
   kitId?: number;
@@ -5345,6 +5869,7 @@ function KitAssetCard({
   onSave: (updatedContent?: string) => void;
   updatePending: boolean;
   onDeploySuccess?: (repoUrl: string) => void;
+  dynamicTiers?: ReturnType<typeof calculateDynamicTiers>;
 }) {
   const [content, setContent] = useState(asset.content);
   useEffect(() => {
@@ -5399,7 +5924,7 @@ function KitAssetCard({
             </StatusPill>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            {asset.description}
+            {(asset.description || "").replace(/\*\*/g, "")}
           </p>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
@@ -5592,7 +6117,7 @@ function KitAssetCard({
         ) : (
           <div>
             {isGig ? (
-              <GigListingViewer content={content} />
+              <GigListingViewer content={content} dynamicTiers={dynamicTiers} />
             ) : isPortfolio ? (
               <PortfolioScaffoldViewer content={content} />
             ) : isLanding ? (
@@ -6624,7 +7149,9 @@ function Variant({
 const KNOWN_TECH_TOKENS = new Set([
   "html", "css", "sql", "js", "ts", "aws", "gcp", "ml", "ai", "k8s", "php", "npm",
   "xml", "ci/cd", "ssh", "ftp", "sdk", "api", "svg", "ui", "ux", "c++", "c#", "r", "c",
-  "vue", "git", "net", "web", "seo", "dev", "ops", "cms", "bot", "vba", "cli", "bash"
+  "vue", "git", "net", "web", "seo", "dev", "ops", "cms", "bot", "vba", "cli", "bash",
+  "postgresql", "postgres", "rag & llms", "rag", "llm", "llms", "rest apis", "ci/cd pipelines",
+  "alembic", "pandas etl", "next.js", "node.js", "tailwind css", "docker", "linux", "fastapi"
 ]);
 
 const KEYBOARD_MASH_REGEX = /(asdf|fsdf|dgdf|dgddfg|dhhb|sdfd|sdsf|dfgh|fghj|ghjk|hjkl|qwer|wert|zxcv|xcvb|cvbn|vbnm|adnkdsn|adnk|dsfd|fgdf)/i;
@@ -6730,6 +7257,7 @@ function SettingsPage() {
   const update = useUpdateProfile();
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
   const p = q.data;
 
   const [form, setForm] = useState({
@@ -6744,6 +7272,17 @@ function SettingsPage() {
     proofProject: "",
     skills: [] as string[],
   });
+
+  const setExperience = (exp: string) => setForm((prev) => ({ ...prev, experience: exp }));
+  const setIncomeGoal = (ig: string | number) => {
+    const raw = typeof ig === "number" ? `₹${ig.toLocaleString()} / month` : String(ig);
+    const formatted = raw.includes("₹") ? raw : `₹${raw}`;
+    setForm((prev) => ({ ...prev, incomeGoal: formatted }));
+  };
+  const setSkills = (s: string[]) => setForm((prev) => ({ ...prev, skills: s }));
+  const setGithubUsername = (gh: string) => setForm((prev) => ({ ...prev, githubUsername: gh }));
+  const setLinkedinUrl = (li: string) => setForm((prev) => ({ ...prev, linkedinUrl: li }));
+  const setProofProject = (pp: string) => setForm((prev) => ({ ...prev, proofProject: pp }));
 
   const [savedForm, setSavedForm] = useState(form);
   const [initialLoaded, setInitialLoaded] = useState(false);
@@ -6765,6 +7304,17 @@ function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    if (user) {
+      if (user.experience) setExperience(user.experience);
+      if (user.income_goal) setIncomeGoal(user.income_goal);
+      if (user.skills && user.skills.length > 0) setSkills(user.skills);
+      if (user.github_username) setGithubUsername(user.github_username);
+      if (user.linkedin_url) setLinkedinUrl(user.linkedin_url);
+      if (user.proof_project) setProofProject(user.proof_project);
+    }
+  }, [user]);
+
+  useEffect(() => {
     try {
       const stored = localStorage.getItem("sie_notification_preferences");
       if (stored) {
@@ -6783,8 +7333,8 @@ function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    if (!p) return;
-    let rawIncome = p.incomeGoal || "";
+    if (!p && !user) return;
+    let rawIncome = (user?.income_goal ? (typeof user.income_goal === 'number' ? `₹${user.income_goal.toLocaleString()} / month` : String(user.income_goal)) : p?.incomeGoal) || "";
     if (rawIncome.includes("$")) {
       rawIncome = rawIncome.replace(/\$/g, "₹");
     } else if (!rawIncome.includes("₹") && rawIncome.trim()) {
@@ -6794,22 +7344,28 @@ function SettingsPage() {
       rawIncome = "₹30,000 / month";
     }
 
+    const loadedSkills = (user?.skills && user.skills.length > 0) ? user.skills : (p?.skills || []);
+    const loadedExp = user?.experience || (user as any)?.experience_level || p?.experience || "";
+    const loadedGh = user?.github_username || (p as any)?.githubUsername || (p as any)?.github_username || "";
+    const loadedLi = user?.linkedin_url || (p as any)?.linkedinUrl || (p as any)?.linkedin_url || "";
+    const loadedProof = user?.proof_project || (p as any)?.proofProject || (p as any)?.proof_project || "";
+
     const loadedForm = {
-      name: p.name || "",
-      email: p.email || "",
-      experience: p.experience || "",
-      availability: p.availability || "",
+      name: user?.name || p?.name || "",
+      email: user?.email || p?.email || "",
+      experience: loadedExp,
+      availability: p?.availability || "",
       incomeGoal: rawIncome,
-      workType: p.workType || "",
-      githubUsername: (p as any).githubUsername || (p as any).github_username || "",
-      linkedinUrl: (p as any).linkedinUrl || (p as any).linkedin_url || "",
-      proofProject: (p as any).proofProject || (p as any).proof_project || "",
-      skills: p.skills || [],
+      workType: (user as any)?.career_mode || p?.workType || "",
+      githubUsername: loadedGh,
+      linkedinUrl: loadedLi,
+      proofProject: loadedProof,
+      skills: loadedSkills,
     };
     setForm(loadedForm);
     setSavedForm(loadedForm);
     setInitialLoaded(true);
-  }, [p]);
+  }, [p, user]);
 
   const isDirty = useMemo(() => {
     if (!initialLoaded) return false;
@@ -6991,11 +7547,11 @@ function SettingsPage() {
     ? (rawLinkedin.startsWith("http://") || rawLinkedin.startsWith("https://") ? rawLinkedin : `https://${rawLinkedin}`)
     : undefined;
 
-  if (!p) {
+  if (!p && !user) {
     return (
       <Page eyebrow="Account" title="Settings">
         <QueryState
-          loading={q.isLoading}
+          loading={q.isLoading && !user}
           error={q.isError}
           onRetry={() => q.refetch()}
         >
@@ -7449,46 +8005,124 @@ function VerifyEmailScreen() {
   );
 }
 
+const ONBOARDING_DRAFT_KEY = "sie_onboarding_draft";
+
+const DOMAIN_SKILL_SUGGESTIONS: Record<string, string[]> = {
+  "Backend & Systems": [
+    "Python", "FastAPI", "PostgreSQL", "REST APIs", "Docker", "SQL"
+  ],
+  "Data Science, AI & LLMs": [
+    "Python", "RAG & LLMs", "Machine Learning", "Data Scraping", "Pandas ETL", "PostgreSQL"
+  ],
+  "Frontend & Full-Stack": [
+    "React", "TypeScript", "Next.js", "Tailwind CSS", "Node.js", "REST APIs"
+  ],
+  "Cloud, DevOps & Database Architecture": [
+    "Docker", "PostgreSQL", "CI/CD Pipelines", "Database Indexing", "Alembic", "Linux"
+  ]
+};
+
 function OnboardingWizard({ onDone }: { onDone: () => void }) {
   const { user, completeOnboarding, markOnboarded, logout } = useAuth();
-  const [step, setStep] = useState(0);
+
+  const draft = useMemo(() => {
+    try {
+      if (typeof window === "undefined") return null;
+      const raw = window.sessionStorage.getItem(ONBOARDING_DRAFT_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const [step, setStep] = useState<number>(() => {
+    if (typeof draft?.step === "number" && draft.step >= 0 && draft.step <= 2) {
+      return draft.step;
+    }
+    return 0;
+  });
 
   // Step 1: Career Focus & Goals
-  const [role, setRole] = useState(user?.career_mode || user?.target_role || "Backend & Systems");
-  const [experienceLevel, setExperienceLevel] = useState<"Beginner" | "Intermediate" | "Advanced">("Intermediate");
-  const [targetIncome, setTargetIncome] = useState("₹30,000");
+  const [role, setRole] = useState(() => {
+    const r = draft?.domain || draft?.role || user?.career_mode || user?.target_role;
+    if (r === "Data Science & AI") return "Data Science, AI & LLMs";
+    if (r === "Automation & Scripting") return "Cloud, DevOps & Database Architecture";
+    if (r && DOMAIN_SKILL_SUGGESTIONS[r]) return r;
+    return "Backend & Systems";
+  });
+  const [experienceLevel, setExperienceLevel] = useState<"Beginner" | "Intermediate" | "Advanced">(
+    (draft?.experience || draft?.experienceLevel || (user?.experience as any) || "Intermediate")
+  );
+  const [targetIncome, setTargetIncome] = useState(
+    draft?.incomeGoal || draft?.targetIncome || user?.income_goal || "₹30,000"
+  );
 
   // Step 2: Validated Core Skills & Optional Proof
-  const [skills, setSkills] = useState<string[]>([
-    "Python",
-    "FastAPI",
-    "PostgreSQL",
-  ]);
+  const [skills, setSkills] = useState<string[]>(() => {
+    if (draft?.skills && Array.isArray(draft.skills) && draft.skills.length > 0) {
+      return draft.skills;
+    }
+    if (user?.skills && user.skills.length > 0) {
+      return user.skills;
+    }
+    return [
+      "Python",
+      "FastAPI",
+      "PostgreSQL",
+    ];
+  });
   const [newSkill, setNewSkill] = useState("");
   const [skillError, setSkillError] = useState<string | null>(null);
-  const [proofProject, setProofProject] = useState(user?.proof_project || "");
+  const [proofProject, setProofProject] = useState(
+    draft?.proofProject ?? (user?.proof_project || "")
+  );
 
   // Step 3: Online Profiles & Footprint
-  const [github, setGithub] = useState(user?.github_username || user?.github_url || "");
+  const [github, setGithub] = useState(
+    draft?.githubUrl || draft?.github || user?.github_username || user?.github_url || ""
+  );
   const [githubError, setGithubError] = useState<string | null>(null);
-  const [githubToken, setGithubToken] = useState(user?.github_token || user?.github_pat || "");
+  const [githubToken, setGithubToken] = useState(
+    draft?.githubToken || user?.github_token || user?.github_pat || ""
+  );
   const [showGithubToken, setShowGithubToken] = useState(false);
-  const [linkedin, setLinkedin] = useState(user?.linkedin_url || "");
+  const [linkedin, setLinkedin] = useState(
+    draft?.linkedinUrl || draft?.linkedin || user?.linkedin_url || ""
+  );
   const [linkedinError, setLinkedinError] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const quickSkills = [
-    "Python",
-    "FastAPI",
-    "React",
-    "SQL",
-    "Web Scraping",
-    "PostgreSQL",
-    "Docker",
-    "Machine Learning",
-  ];
+  // Cache active onboarding form state in sessionStorage
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const draftData = {
+          step,
+          domain: role,
+          role,
+          experience: experienceLevel,
+          experienceLevel,
+          incomeGoal: targetIncome,
+          targetIncome,
+          skills,
+          proofProject,
+          githubUrl: github,
+          github,
+          githubToken,
+          linkedinUrl: linkedin,
+          linkedin,
+        };
+        window.sessionStorage.setItem(ONBOARDING_DRAFT_KEY, JSON.stringify(draftData));
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, [step, role, experienceLevel, targetIncome, skills, proofProject, github, githubToken, linkedin]);
+
+  const quickSkills = DOMAIN_SKILL_SUGGESTIONS[role] || DOMAIN_SKILL_SUGGESTIONS["Backend & Systems"];
 
   const addSkill = (s: string) => {
     const clean = s.trim();
@@ -7629,6 +8263,9 @@ function OnboardingWizard({ onDone }: { onDone: () => void }) {
         // Handled via completeOnboarding
       }
 
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem(ONBOARDING_DRAFT_KEY);
+      }
       localStorage.setItem("onboarding_completed", "true");
       queryClient.setQueryData(getMeQueryKey(), (prev: any) => {
         if (!prev) return prev;
@@ -7658,7 +8295,12 @@ function OnboardingWizard({ onDone }: { onDone: () => void }) {
             </span>
             <button
               type="button"
-              onClick={() => logout()}
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.sessionStorage.removeItem(ONBOARDING_DRAFT_KEY);
+                }
+                logout();
+              }}
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition ml-1 px-2 py-1 rounded-lg border border-border/60 hover:bg-secondary cursor-pointer"
               title="Sign out and return to landing page"
               data-testid="button-onboarding-logout"
@@ -7694,9 +8336,9 @@ function OnboardingWizard({ onDone }: { onDone: () => void }) {
                   data-testid="select-onboarding-track"
                 >
                   <option value="Backend & Systems">Backend & Systems</option>
-                  <option value="Data Science & AI">Data Science & AI</option>
+                  <option value="Data Science, AI & LLMs">Data Science, AI & LLMs</option>
                   <option value="Frontend & Full-Stack">Frontend & Full-Stack</option>
-                  <option value="Automation & Scripting">Automation & Scripting</option>
+                  <option value="Cloud, DevOps & Database Architecture">Cloud, DevOps & Database Architecture</option>
                 </select>
               </div>
 
@@ -7832,7 +8474,7 @@ function OnboardingWizard({ onDone }: { onDone: () => void }) {
 
               <div className="mt-4">
                 <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-2">
-                  Popular Suggestions:
+                  Popular Suggestions ({role}):
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {quickSkills.map((qs) => {
@@ -8142,7 +8784,8 @@ function AppContent() {
   }
 
   // Guard 2: Verified but hasn't completed data-driven onboarding wizard
-  if (!user.onboarding_completed) {
+  const showOnboarding = Boolean(user && user.onboarding_completed === false);
+  if (showOnboarding) {
     return <OnboardingWizard onDone={() => setLocation("/dashboard")} />;
   }
 

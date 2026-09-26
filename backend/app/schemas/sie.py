@@ -111,6 +111,8 @@ class IncomeKitResponse(BaseModel):
 class GenerateIncomeKitBody(BaseModel):
     opportunityId: Optional[str] = None
     service: Optional[str] = None
+    skill: Optional[str] = None
+    skill_name: Optional[str] = None
     opportunityTitle: Optional[str] = None
     opportunity_title: Optional[str] = None
     category: Optional[str] = None
