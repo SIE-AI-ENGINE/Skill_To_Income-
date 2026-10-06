@@ -545,7 +545,145 @@ function AuthModal({
   );
 }
 
+function DemoVideoModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const [videoError, setVideoError] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setVideoError(false);
+      const timer = setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.play().catch(() => {});
+        }
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#071326]/85 p-3 md:p-6 backdrop-blur-md animate-fade-in"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-white/20 bg-[#0f233d] shadow-[0_25px_70px_rgba(0,0,0,0.85)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-white/10 bg-[#173762] px-5 py-3.5 text-white">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#7edbea]/20 text-[#7edbea]">
+              <Play size={15} className="fill-[#7edbea] translate-x-0.5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">
+                Skill-to-Income AI Engine (SIE) — Interactive Demo
+              </h3>
+              <p className="text-[11px] text-white/60">
+                End-to-End Pipeline Walkthrough • Vector Matching • Income Kits
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white transition cursor-pointer"
+            aria-label="Close demo video"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="relative aspect-video w-full bg-black flex items-center justify-center">
+          {videoError ? (
+            <div className="flex flex-col items-center justify-center p-8 text-center text-white">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#7edbea]/20 text-[#7edbea]">
+                <Play size={28} className="translate-x-0.5" />
+              </div>
+              <h4 className="text-lg font-bold text-white">
+                Demo Video Ready to Play
+              </h4>
+              <p className="mt-2 max-w-md text-xs leading-relaxed text-white/70">
+                To play your demonstration video here, paste your MP4 video file into:
+              </p>
+              <div className="mt-3 flex items-center gap-2 rounded-lg border border-white/15 bg-black/60 px-4 py-2 font-mono text-xs text-[#7edbea]">
+                <span>frontend/public/demo.mp4</span>
+              </div>
+              <p className="mt-3 text-[11px] text-white/50">
+                Full path: <code className="text-white/70">c:\Users\admin\Skill_To_Income-\frontend\public\demo.mp4</code>
+              </p>
+              <button
+                onClick={() => setVideoError(false)}
+                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#7edbea] px-4 py-2 text-xs font-bold text-[#0f233d] hover:bg-[#6ec9d8] transition cursor-pointer"
+              >
+                <RefreshCw size={14} /> Retry Video
+              </button>
+            </div>
+          ) : (
+            <video
+              ref={videoRef}
+              controls
+              autoPlay
+              playsInline
+              className="h-full w-full object-contain"
+              onError={() => setVideoError(true)}
+            >
+              <source src="/demo.mp4" type="video/mp4" />
+              <source src="/Skill%20To%20Income%20Demo%20video%20.mp4" type="video/mp4" />
+              <source src="/videos/demo.mp4" type="video/mp4" />
+              <source src="/demo.webm" type="video/webm" />
+              Your browser does not support the video tag.
+            </video>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between border-t border-white/10 bg-[#0d1e33] px-5 py-3 text-xs text-white/70">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 font-medium text-emerald-400">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              Interactive Video Mode
+            </span>
+            <span className="text-white/30">•</span>
+            <span>Source: <code className="text-[#7edbea]">/demo.mp4</code></span>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-white hover:bg-white/10 transition cursor-pointer"
+          >
+            Close Viewer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Landing({ onLogin }: { onLogin: () => void }) {
+  const [demoModalOpen, setDemoModalOpen] = useState(false);
+
   return (
     <div className="noise overflow-hidden">
       <PublicNav onLogin={onLogin} />
@@ -575,13 +713,14 @@ function Landing({ onLogin }: { onLogin: () => void }) {
                 >
                   Explore the engine <ArrowRight size={16} />
                 </Button>
-                <Link
-                  href="/how-it-works"
-                  className="inline-flex h-12 items-center gap-2 rounded-xl border border-border bg-card px-5 text-sm font-bold text-foreground transition hover:border-primary/40 hover:bg-secondary"
+                <button
+                  type="button"
+                  onClick={() => setDemoModalOpen(true)}
+                  className="inline-flex h-12 items-center gap-2 rounded-xl border border-border bg-card px-5 text-sm font-bold text-foreground transition hover:border-primary/40 hover:bg-secondary cursor-pointer"
                   data-testid="link-hero-how-it-works"
                 >
-                  <Play size={15} className="text-primary" /> See how it works
-                </Link>
+                  <Play size={15} className="text-primary fill-primary" /> Watch video demo
+                </button>
               </div>
               <div className="mt-10 flex items-center gap-5 text-xs text-muted-foreground">
                 <div className="flex -space-x-2">
@@ -693,12 +832,12 @@ function Landing({ onLogin }: { onLogin: () => void }) {
                   help you make the next step smaller and more specific.
                 </p>
                 <Button
-                  onClick={onLogin}
+                  onClick={() => setDemoModalOpen(true)}
                   variant="secondary"
-                  className="mt-8 border-white/20 bg-white/10 text-white hover:bg-white/15"
+                  className="mt-8 border-white/20 bg-white/10 text-white hover:bg-white/15 cursor-pointer shadow-lg inline-flex items-center gap-2"
                   testId="button-final-cta"
                 >
-                  Open the demo <ArrowRight size={16} />
+                  <Play size={15} className="fill-white translate-x-0.5" /> Open the demo <ArrowRight size={16} />
                 </Button>
               </div>
               <div className="relative mt-8 md:mt-0">
@@ -740,16 +879,46 @@ function Landing({ onLogin }: { onLogin: () => void }) {
                     </div>
                   </div>
 
-                  <div className="mt-5 flex flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-white/5 p-5 text-center">
-                    <div className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white/40">
-                      <Play size={18} className="translate-x-0.5 opacity-60" />
+                  {/* Interactive Video Container */}
+                  <div className="mt-5 overflow-hidden rounded-xl border border-white/20 bg-black/40 shadow-inner">
+                    <div className="relative aspect-video w-full bg-slate-950/80 flex items-center justify-center group overflow-hidden">
+                      <video
+                        controls
+                        playsInline
+                        className="h-full w-full object-cover"
+                        preload="metadata"
+                      >
+                        <source src="/demo.mp4" type="video/mp4" />
+                        <source src="/Skill%20To%20Income%20Demo%20video%20.mp4" type="video/mp4" />
+                        <source src="/videos/demo.mp4" type="video/mp4" />
+                        <source src="/demo.webm" type="video/webm" />
+                      </video>
+                      
+                      <div 
+                        onClick={() => setDemoModalOpen(true)}
+                        className="absolute inset-0 flex flex-col items-center justify-center bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer backdrop-blur-[2px]"
+                        title="Click to view full cinematic demo"
+                      >
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#7edbea] text-[#0f233d] shadow-lg transform transition group-hover:scale-110">
+                          <Play size={20} className="fill-[#0f233d] translate-x-0.5" />
+                        </div>
+                        <span className="mt-2 text-xs font-bold text-white tracking-wide drop-shadow">
+                          Expand to Fullscreen Player
+                        </span>
+                      </div>
                     </div>
-                    <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-white/80">
-                      <Lock size={12} className="opacity-70" /> Full Walkthrough Available Upon Build Completion
+                    <div className="flex items-center justify-between border-t border-white/10 bg-black/25 px-3.5 py-2 text-[11px] text-white/70">
+                      <span className="flex items-center gap-1.5 font-medium text-emerald-400">
+                        <Check size={12} /> Video Player Active
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setDemoModalOpen(true)}
+                        className="font-semibold text-[#7edbea] hover:underline cursor-pointer"
+                      >
+                        Open Fullscreen ↗
+                      </button>
                     </div>
-                    <p className="mt-2 text-[11px] text-white/50">
-                      Interactive sandbox compiles alongside final pipeline deployment.
-                    </p>
                   </div>
                 </div>
               </div>
@@ -774,6 +943,14 @@ function Landing({ onLogin }: { onLogin: () => void }) {
           <span>© 2025 Skill-to-Income AI Engine · All rights reserved</span>
         </div>
       </footer>
+
+      {/* Fullscreen Video Demo Modal */}
+      {demoModalOpen && (
+        <DemoVideoModal
+          isOpen={demoModalOpen}
+          onClose={() => setDemoModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -895,6 +1072,8 @@ function PublicExplainer({
   page: "features" | "how" | "about";
   onLogin: () => void;
 }) {
+  const [demoModalOpen, setDemoModalOpen] = useState(false);
+
   const data =
     page === "features"
       ? {
@@ -1038,11 +1217,11 @@ function PublicExplainer({
                 description="Rather than hide intelligence behind a chat bubble, SIE puts the evidence beside the action: scores, sources, fit notes, drafts and feedback."
               />
               <Button
-                onClick={onLogin}
-                className="mt-8"
+                onClick={() => setDemoModalOpen(true)}
+                className="mt-8 inline-flex items-center gap-2 cursor-pointer shadow-md"
                 testId="button-explainer-open-demo"
               >
-                Open the demo <ArrowRight size={16} />
+                <Play size={15} className="fill-white translate-x-0.5" /> Open the demo <ArrowRight size={16} />
               </Button>
             </div>
             <div className="surface blue-grid p-6">
@@ -1083,6 +1262,14 @@ function PublicExplainer({
           <Logo />
         </div>
       </footer>
+
+      {/* Fullscreen Video Demo Modal */}
+      {demoModalOpen && (
+        <DemoVideoModal
+          isOpen={demoModalOpen}
+          onClose={() => setDemoModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -7239,6 +7426,12 @@ function validateAndFormatGithub(input: string): { valid: boolean; formatted?: s
   };
 }
 
+function isValidGithubToken(token: string): boolean {
+  const clean = token.trim();
+  if (!clean) return true;
+  return clean.startsWith("ghp_") || clean.startsWith("github_pat_");
+}
+
 const LI_STRICT_REGEX = /^(https?:\/\/)?([a-z]{2,3}\.)?linkedin\.com\/in\/([A-Za-z0-9_-]+)\/?$/i;
 
 function validateAndFormatLinkedin(input: string): { valid: boolean; formatted?: string; username?: string } {
@@ -8086,6 +8279,7 @@ function OnboardingWizard({ onDone }: { onDone: () => void }) {
   const [githubToken, setGithubToken] = useState(
     draft?.githubToken || user?.github_token || user?.github_pat || ""
   );
+  const [githubTokenError, setGithubTokenError] = useState<string | null>(null);
   const [showGithubToken, setShowGithubToken] = useState(false);
   const [linkedin, setLinkedin] = useState(
     draft?.linkedinUrl || draft?.linkedin || user?.linkedin_url || ""
@@ -8194,20 +8388,46 @@ function OnboardingWizard({ onDone }: { onDone: () => void }) {
     }
   };
 
+  const handleGithubTokenChange = (val: string) => {
+    setGithubToken(val);
+    if (!val.trim()) {
+      setGithubTokenError(null);
+    } else if (!isValidGithubToken(val)) {
+      setGithubTokenError("Token must begin with 'ghp_' (classic) or 'github_pat_' (fine-grained)");
+    } else {
+      setGithubTokenError(null);
+    }
+  };
+
+  const handleGithubTokenBlur = () => {
+    if (githubToken.trim() && !isValidGithubToken(githubToken)) {
+      setGithubTokenError("Token must begin with 'ghp_' (classic) or 'github_pat_' (fine-grained)");
+    } else {
+      setGithubTokenError(null);
+    }
+  };
+
   const isStep1Valid = Boolean(role && experienceLevel && targetIncome);
   const isStep2Valid = skills.length >= 2;
   const isGithubValid = validateAndFormatGithub(github).valid;
   const isLinkedinValid = !linkedin.trim() || validateAndFormatLinkedin(linkedin).valid;
-  const isReadyToFinish = isStep1Valid && isStep2Valid && isGithubValid && isLinkedinValid;
+  const isGithubTokenValid = !githubToken.trim() || isValidGithubToken(githubToken);
+  const isReadyToFinish = isStep1Valid && isStep2Valid && isGithubValid && isLinkedinValid && isGithubTokenValid;
 
   const handleSubmit = async () => {
     setError(null);
     setGithubError(null);
     setLinkedinError(null);
+    setGithubTokenError(null);
 
     const ghRes = validateAndFormatGithub(github);
     if (!ghRes.valid) {
       setGithubError("Please enter a valid GitHub profile URL or username (e.g., https://github.com/username)");
+      return;
+    }
+
+    if (githubToken.trim() && !isValidGithubToken(githubToken)) {
+      setGithubTokenError("Token must begin with 'ghp_' (classic) or 'github_pat_' (fine-grained)");
       return;
     }
 
@@ -8594,9 +8814,12 @@ function OnboardingWizard({ onDone }: { onDone: () => void }) {
                   <input
                     type={showGithubToken ? "text" : "password"}
                     value={githubToken}
-                    onChange={(e) => setGithubToken(e.target.value)}
+                    onChange={(e) => handleGithubTokenChange(e.target.value)}
+                    onBlur={handleGithubTokenBlur}
                     placeholder="ghp_... or github_pat_..."
-                    className="h-11 w-full rounded-xl border border-input bg-background pl-3.5 pr-10 text-xs font-mono outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
+                    className={`h-11 w-full rounded-xl border ${
+                      githubTokenError ? "border-destructive ring-destructive/20" : "border-input"
+                    } bg-background pl-3.5 pr-10 text-xs font-mono outline-none focus:ring-2 focus:ring-primary/20 text-foreground`}
                     data-testid="input-onboarding-github-token"
                   />
                   <button
@@ -8608,6 +8831,9 @@ function OnboardingWizard({ onDone }: { onDone: () => void }) {
                     {showGithubToken ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
+                {githubTokenError && (
+                  <p className="mt-1 text-xs font-semibold text-destructive" data-testid="text-github-token-error">{githubTokenError}</p>
+                )}
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   Enables instant 1-click repo deployment. You can skip this and configure it later in Settings.
                 </p>

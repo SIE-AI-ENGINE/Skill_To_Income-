@@ -30,6 +30,15 @@ class UserBase(BaseModel):
                 data["name"] = data.get("full_name")
         return data
 
+    @field_validator("github_token", check_fields=False)
+    @classmethod
+    def validate_userbase_pat_prefix(cls, v: Optional[str]) -> Optional[str]:
+        if v and v.strip():
+            v_clean = v.strip()
+            if not (v_clean.startswith("ghp_") or v_clean.startswith("github_pat_")):
+                raise ValueError("Personal Access Token must start with 'ghp_' or 'github_pat_'")
+        return v
+
 class UserCreate(UserBase):
     password: str
 
@@ -66,6 +75,15 @@ class UserUpdate(BaseModel):
     github_url: Optional[str] = None
     github_pat: Optional[str] = None
     skills: Optional[List[str]] = None
+
+    @field_validator("github_token", "github_pat", check_fields=False)
+    @classmethod
+    def validate_update_pat_prefix(cls, v: Optional[str]) -> Optional[str]:
+        if v and v.strip():
+            v_clean = v.strip()
+            if not (v_clean.startswith("ghp_") or v_clean.startswith("github_pat_")):
+                raise ValueError("Personal Access Token must start with 'ghp_' or 'github_pat_'")
+        return v
 
 class UserResponse(UserBase):
     id: int
